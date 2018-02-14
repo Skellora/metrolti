@@ -1,0 +1,6 @@
+[package]
+name = "thing"
+version = "0.1.0"
+authors = ["Skellora <pascal_noel@hotmail.com>"]
+
+[dependencies]
