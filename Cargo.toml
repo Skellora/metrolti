@@ -15,3 +15,6 @@ serde_derive = "1.0.0"
 serde_json = "1.0.0"
 
 tungstenite = "0.5.0"
+
+[dev-dependencies]
+url = "1.6.0"

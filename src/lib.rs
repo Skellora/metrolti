@@ -52,6 +52,14 @@ fn player_handler(
     player_receiver: Receiver<Box<WebSocket<TcpStream>>>,
     to_server: Sender<GameEvent>,
 ) {
+    for mut player in player_receiver.iter() {
+        thread::spawn(move || loop {
+            let m = player.read_message();
+            if let Ok(message) = m {
+                player.write_message(message);
+            }
+        });
+    }
 }
 
 struct GameEvent;
@@ -71,12 +79,26 @@ impl<E> SoftExpect<E> for Result<(), E>
 
 #[cfg(test)]
 mod tests {
+    extern crate url;
+
     use super::*;
     use std::time::{Duration};
+    use self::url::Url;
+
     #[test]
-    fn it_works() {
+    fn server_comms1() {
         listen("0.0.0.0:12345".to_string(), "127.0.0.1".to_string());
+
+        let uri = Url::parse("ws://localhost:12345").unwrap();
+        let mut ws = tungstenite::connect(uri).unwrap().0;
+        ws.write_message(tungstenite::Message::text("test".to_string()));
+
+        assert_eq!("test", ws.read_message().unwrap().to_text().unwrap());
+
+
         TcpStream::connect("localhost:12345").unwrap();
-        thread::sleep(Duration::from_secs(3));
+        thread::sleep(Duration::from_secs(1));
+
+        assert!(TcpStream::connect("localhost:12345").is_err());
     }
 }
