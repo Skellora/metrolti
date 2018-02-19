@@ -158,6 +158,17 @@ pub trait Game {
     fn main(&mut self);
 }
 
+pub struct MetroGame {
+}
+
+impl Game for MetroGame {
+    fn new(event_loop: Receiver<InputEvent>) -> Self {
+        MetroGame {
+        }
+    }
+    fn main(&mut self) {}
+}
+
 trait SoftExpect<E> {
     fn sexpect(self, message: &str);
 }
@@ -179,15 +190,38 @@ mod tests {
     use std::time::{Duration};
     use self::url::Url;
 
+    struct EchoGame {
+        r: Receiver<InputEvent>,
+    }
+
+    impl Game for EchoGame {
+        fn new(r: Receiver<InputEvent>) -> Self {
+            EchoGame {
+                r: r
+            }
+        }
+
+        fn main(&mut self) {
+            let mut p = None;
+            loop {
+                match self.r.recv().unwrap() {
+                    InputEvent::Connection(_, player) => { p = Some(player); },
+                    InputEvent::Message(_, _) => { p.take().map(|player| player.send_message(StateUpdate)); },
+                    _ => {},
+                }
+            }
+        }
+    }
+
     #[test]
     fn server_comms1() {
-        listen("0.0.0.0:12345".to_string(), "127.0.0.1".to_string());
+        listen::<EchoGame>("0.0.0.0:12345".to_string(), "127.0.0.1".to_string());
 
         let uri = Url::parse("ws://localhost:12345").unwrap();
         let mut ws = tungstenite::connect(uri).unwrap().0;
-        ws.write_message(tungstenite::Message::text("test".to_string()));
+        ws.write_message(tungstenite::Message::text("null".to_string()));
 
-        assert_eq!("test", ws.read_message().unwrap().to_text().unwrap());
+        assert_eq!("null", ws.read_message().unwrap().to_text().unwrap());
 
 
         TcpStream::connect("localhost:12345").unwrap();
