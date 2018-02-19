@@ -18,3 +18,12 @@ tungstenite = "0.5.0"
 
 [dev-dependencies]
 url = "1.6.0"
+
+[lib]
+name = "metrolti_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "metrolti_bin"
+path = "src/main.rs"
+

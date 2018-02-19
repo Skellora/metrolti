@@ -15,7 +15,7 @@ use tungstenite::{WebSocket, Message};
 use tungstenite::protocol::Role;
 use tungstenite::error::Error;
 
-fn listen(websocket_address: String, murder_host: String) {
+pub fn listen(websocket_address: String, murder_host: String) {
     let (connection_sender, connection_receiver) = channel();
     let (to_server_sender, to_server_receiver) = channel();
     thread::spawn(move || {
