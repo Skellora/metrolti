@@ -15,7 +15,7 @@ use tungstenite::{WebSocket, Message};
 use tungstenite::protocol::Role;
 use tungstenite::error::Error;
 
-pub fn listen(websocket_address: String, murder_host: String) {
+pub fn listen<G: Game>(websocket_address: String, murder_host: String) {
     let (connection_sender, connection_receiver) = channel();
     let (to_server_sender, to_server_receiver) = channel();
     thread::spawn(move || {
@@ -25,13 +25,13 @@ pub fn listen(websocket_address: String, murder_host: String) {
     thread::spawn(move || {
         player_handler(connection_receiver, to_server_sender);
     });
-//    thread::spawn(move || {
-//        Game::new(to_server_receiver).main();
-//    });
+    thread::spawn(move || {
+        G::new(to_server_receiver).main();
+    });
 }
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
-struct PlayerId(u16);
+pub struct PlayerId(u16);
 
 fn handle_player_in(to_server: Sender<InputEvent>, in_stream: TcpStream, id: PlayerId) {
     let mut ws = WebSocket::from_raw_socket(in_stream, Role::Server);
@@ -125,20 +125,20 @@ fn player_handler(
 }
 
 #[derive(Debug)]
-enum InputEvent {
+pub enum InputEvent {
     Message(PlayerId, PlayerAction),
     Connection(PlayerId, Player),
     Disconnection(PlayerId),
 }
 
 #[derive(Debug, Deserialize)]
-struct PlayerAction;
+pub struct PlayerAction;
 
 #[derive(Debug, Serialize)]
-struct StateUpdate;
+pub struct StateUpdate;
 
 #[derive(Debug)]
-struct Player {
+pub struct Player {
     sender: Sender<StateUpdate>,
 }
 
@@ -151,6 +151,11 @@ impl Player {
         self.sender.send(message)
           .sexpect("Failed to send message to player handler");
     }
+}
+
+pub trait Game {
+    fn new(event_loop: Receiver<InputEvent>) -> Self;
+    fn main(&mut self);
 }
 
 trait SoftExpect<E> {
