@@ -11,13 +11,14 @@ pub fn listen<G: Game>(websocket_address: String, murder_host: String) {
     thread::spawn(move || {
         let tcp = TcpListener::bind(websocket_address).unwrap();
         connection_handler(connection_sender, tcp, murder_host);
+        println!("Closing connection handler");
     });
     thread::spawn(move || {
         player_handler(connection_receiver, to_server_sender);
+        println!("Closing player handler");
     });
-    thread::spawn(move || {
-        G::new(to_server_receiver).main();
-    });
+    G::new(to_server_receiver).main();
+    println!("Game exiting");
 }
 
 
@@ -58,7 +59,7 @@ mod tests {
 
     #[test]
     fn server_comms1() {
-        listen::<EchoGame>("0.0.0.0:12345".to_string(), "127.0.0.1".to_string());
+        thread::spawn(|| listen::<EchoGame>("0.0.0.0:12345".to_string(), "127.0.0.1".to_string()));
 
         let uri = Url::parse("ws://localhost:12345").unwrap();
         let mut ws = tungstenite::connect(uri).unwrap().0;
