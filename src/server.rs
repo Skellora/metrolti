@@ -50,7 +50,7 @@ mod tests {
             loop {
                 match self.r.recv().unwrap() {
                     InputEvent::Connection(_, player) => { p = Some(player); },
-                    InputEvent::Message(_, _) => { p.take().map(|player| player.send_message(StateUpdate)); },
+                    InputEvent::Message(_, _) => { p.take().map(|player| player.send_message(StateUpdate::LobbyCount(1))); },
                     _ => {},
                 }
             }
@@ -65,7 +65,7 @@ mod tests {
         let mut ws = tungstenite::connect(uri).unwrap().0;
         ws.write_message(tungstenite::Message::text("null".to_string()));
 
-        assert_eq!("null", ws.read_message().unwrap().to_text().unwrap());
+        assert_eq!("{\"LobbyCount\":1}", ws.read_message().unwrap().to_text().unwrap());
 
 
         TcpStream::connect("localhost:12345").unwrap();

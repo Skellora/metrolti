@@ -12,5 +12,7 @@ pub enum InputEvent {
 pub struct PlayerAction;
 
 #[derive(Debug, Serialize)]
-pub struct StateUpdate;
+pub enum StateUpdate {
+    LobbyCount(u8),
+}
 
