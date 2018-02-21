@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <script>
+      function clicky() {
+        let ws = new WebSocket('ws://{{ websocket }}');
+        document.getElementById('status').innerText = 'Connecting';
+        ws.onopen = function() {
+          document.getElementById('status').innerText = 'Connected';
+        }
+        ws.onmessage = function(m) {
+          document.getElementById('count').innerText = JSON.parse(m.data).LobbyCount;
+        };
+        ws.onerror = function(m) {
+          alert(JSON.stringify(m));
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <h2>{{ test }}</h2>
+    <div id='status'>?</div>
+    <b>Lobby: </b>
+    <span id='count'>?</span>
+    <button onclick="clicky('works');">Button</button>
+  </body>
+</html>

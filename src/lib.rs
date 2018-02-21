@@ -1,3 +1,6 @@
+extern crate iron;
+extern crate handlebars;
+extern crate handlebars_iron;
 extern crate tungstenite;
 extern crate serde;
 #[macro_use]
@@ -11,4 +14,4 @@ mod player_id;
 mod player;
 pub mod server;
 mod sexpect;
-
+pub mod web;
