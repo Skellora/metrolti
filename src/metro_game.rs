@@ -46,12 +46,10 @@ impl Game for MetroGame {
 
 impl MetroGame {
     pub fn input(&mut self) {
-        let in_event = self.r.recv();
-        match in_event {
-            Ok(e) => self.handle_event(e),
-            Err(_) => self.quit(),
+        let mut events : Vec<_> = self.r.try_iter().collect();
+        for in_event in events.drain(..) {
+            self.handle_event(in_event);
         }
-        
     }
     fn handle_event(&mut self, ev: InputEvent) {
         match ev {
@@ -63,9 +61,6 @@ impl MetroGame {
             }
             _ => {}
         }
-    }
-    fn quit(&mut self) {
-        panic!("Gameover");
     }
     pub fn update(&mut self) {}
     pub fn output(&mut self) {
