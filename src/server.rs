@@ -1,11 +1,13 @@
 use std::net::TcpListener;
 use std::sync::mpsc::channel;
 use std::thread;
+use std::time::Duration;
 
 use game::Game;
 use player::*;
+use ticks::*;
 
-pub fn listen<G: Game>(websocket_address: String, murder_host: String) {
+pub fn listen<G: Game<TPSTicker>>(websocket_address: String, murder_host: String) {
     let (connection_sender, connection_receiver) = channel();
     let (to_server_sender, to_server_receiver) = channel();
     thread::spawn(move || {
@@ -17,7 +19,9 @@ pub fn listen<G: Game>(websocket_address: String, murder_host: String) {
         player_handler(connection_receiver, to_server_sender);
         println!("Closing player handler");
     });
-    G::new(to_server_receiver).main();
+    let tick_rate = Duration::from_millis(1000/30);
+    let ticker = TPSTicker::new(tick_rate);
+    G::new(to_server_receiver, ticker).main();
     println!("Game exiting");
 }
 
@@ -38,8 +42,8 @@ mod tests {
         r: Receiver<InputEvent>,
     }
 
-    impl Game for EchoGame {
-        fn new(r: Receiver<InputEvent>) -> Self {
+    impl<T: Ticker> Game<T> for EchoGame {
+        fn new(r: Receiver<InputEvent>, _: T) -> Self {
             EchoGame {
                 r: r
             }
