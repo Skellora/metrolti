@@ -80,3 +80,42 @@ impl<T: Ticker> MetroGame<T> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc::channel;
+    use std::thread;
+    use ticks::TestTicker;
+    use player::Player;
+    use player_id::PlayerId;
+    use events::*;
+    use super::*;
+
+    fn connect_player(sender: Sender<InputEvent>, id: u8) -> Receiver<StateUpdate> {
+        let (ps, pr) = channel();
+        let p_id = PlayerId::new(id);
+        let p = Player::new(ps);
+        sender.send(InputEvent::Connection(p_id, p));
+        pr
+    }
+
+    fn start_test_game() -> (Sender<InputEvent>, Sender<()>) {
+        let (ts, tr) = channel();
+        let t = TestTicker { r: tr };
+        let (gs, gr) = channel();
+        let mut test_game = MetroGame::new(gr, t);
+        thread::spawn(move || test_game.main());
+        (gs, ts)
+    }
+
+    #[test]
+    fn tada() {
+        let (gs, ts) = start_test_game();
+        let pr1 = connect_player(gs, 1);
+        ts.send(());
+        assert_eq!(StateUpdate::LobbyCount(1), pr1.recv().unwrap());
+        let pr2 = connect_player(gs, 2);
+        ts.send(());
+        assert_eq!(StateUpdate::LobbyCount(2), pr1.recv().unwrap());
+        assert_eq!(StateUpdate::LobbyCount(2), pr2.recv().unwrap());
+    }
+}

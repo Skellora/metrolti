@@ -1,3 +1,4 @@
+use std::sync::mpsc::Receiver;
 use std::time::{ Duration, Instant };
 use std::thread;
 
@@ -34,3 +35,13 @@ impl Ticker for TPSTicker {
     }
 }
 
+pub struct TestTicker {
+    pub r: Receiver<()>,
+}
+
+impl Ticker for TestTicker {
+    fn start(&mut self){}
+    fn wait_until_next_tick(&mut self) {
+        self.r.recv().unwrap();
+    }
+}

@@ -13,7 +13,7 @@ pub enum PlayerAction {
     StartGame,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum StateUpdate {
     LobbyCount(u8),
 }
