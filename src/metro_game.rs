@@ -3,12 +3,13 @@ use std::sync::mpsc::Receiver;
 use std::time::{ Instant, Duration };
 use std::thread;
 
-use events::{ InputEvent, StateUpdate };
+use events::{ InputEvent, StateUpdate, PlayerAction };
 use game::Game;
 use player_id::*;
 use player::Player;
 
 // This would probably be better off with state-handling trait and types
+#[derive(Debug, Eq, PartialEq)]
 enum MGameState {
     Lobby,
     Game,
@@ -52,6 +53,13 @@ impl MetroGame {
         }
     }
     fn handle_event(&mut self, ev: InputEvent) {
+        match self.state {
+            MGameState::Lobby => self.handle_lobby_event(ev),
+            MGameState::Game => {},
+        }
+    }
+
+    fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
             InputEvent::Connection(p_id, p) => {
                 self.player_out.insert(p_id, p);
@@ -59,7 +67,12 @@ impl MetroGame {
             InputEvent::Disconnection(p_id) => {
                 self.player_out.remove(&p_id);
             }
-            _ => {}
+            InputEvent::PlayerAction(p_id, action) => {
+                match action {
+                    PlayerAction::StartGame => { self.state = MGameState::Game }
+                    _ => {}
+                }
+            }
         }
     }
     pub fn update(&mut self) {}

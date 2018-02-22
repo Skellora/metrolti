@@ -3,13 +3,15 @@ use player::Player;
 
 #[derive(Debug)]
 pub enum InputEvent {
-    Message(PlayerId, PlayerAction),
+    PlayerAction(PlayerId, PlayerAction),
     Connection(PlayerId, Player),
     Disconnection(PlayerId),
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PlayerAction;
+pub enum PlayerAction {
+    StartGame,
+}
 
 #[derive(Debug, Serialize)]
 pub enum StateUpdate {

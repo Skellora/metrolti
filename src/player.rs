@@ -22,7 +22,7 @@ fn handle_player_in(to_server: Sender<InputEvent>, in_stream: TcpStream, id: Pla
                 let json_m = serde_json::from_str(&m_text);
                 match json_m {
                     Ok(player_m) => {
-                        let translated_message = InputEvent::Message(id.clone(), player_m);
+                        let translated_message = InputEvent::PlayerAction(id.clone(), player_m);
                         to_server.send(translated_message)
                           .sexpect("Failed to forward message to server");
                     }
