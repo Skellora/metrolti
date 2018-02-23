@@ -82,40 +82,56 @@ impl<T: Ticker> MetroGame<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::mpsc::channel;
+    use std::sync::mpsc::{ channel, Sender, Receiver };
     use std::thread;
+    use std::time::Duration;
     use ticks::TestTicker;
     use player::Player;
     use player_id::PlayerId;
     use events::*;
     use super::*;
 
-    fn connect_player(sender: Sender<InputEvent>, id: u8) -> Receiver<StateUpdate> {
+    fn connect_player(sender: &Sender<InputEvent>, id: u16) -> Receiver<StateUpdate> {
         let (ps, pr) = channel();
         let p_id = PlayerId::new(id);
         let p = Player::new(ps);
-        sender.send(InputEvent::Connection(p_id, p));
+        sender.send(InputEvent::Connection(p_id, p)).expect("test player connect");
         pr
     }
 
-    fn start_test_game() -> (Sender<InputEvent>, Sender<()>) {
-        let (ts, tr) = channel();
-        let t = TestTicker { r: tr };
+    fn disconnect_player(sender: &Sender<InputEvent>, id: u16) {
+        sender.send(InputEvent::Disconnection(PlayerId::new(id))).expect("test pkayer disconnect");
+    }
+
+    fn start_test_game() -> (Sender<InputEvent>, (Sender<()>, Receiver<()>)) {
+        let (tsw, trw) = channel();
+        let (tss, trs) = channel();
+        let t = TestTicker { r: trw, s: tss };
         let (gs, gr) = channel();
         let mut test_game = MetroGame::new(gr, t);
         thread::spawn(move || test_game.main());
-        (gs, ts)
+        thread::sleep(Duration::from_millis(200));
+        (gs, (tsw, trs))
+    }
+
+    fn tick(&(ref tsw, ref trs): &(Sender<()>, Receiver<()>)) {
+        tsw.send(()).unwrap();
+        trs.recv().unwrap();
     }
 
     #[test]
-    fn tada() {
-        let (gs, ts) = start_test_game();
-        let pr1 = connect_player(gs, 1);
-        ts.send(());
-        assert_eq!(StateUpdate::LobbyCount(1), pr1.recv().unwrap());
-        let pr2 = connect_player(gs, 2);
-        ts.send(());
-        assert_eq!(StateUpdate::LobbyCount(2), pr1.recv().unwrap());
-        assert_eq!(StateUpdate::LobbyCount(2), pr2.recv().unwrap());
+    fn connecting_players() {
+        let (gs, ticks) = start_test_game();
+        let pr1 = connect_player(&gs, 1);
+        tick(&ticks);
+        assert_eq!(Ok(StateUpdate::LobbyCount(1)), pr1.recv());
+        let pr2 = connect_player(&gs, 2);
+        tick(&ticks);
+        assert_eq!(Ok(StateUpdate::LobbyCount(2)), pr1.recv());
+        assert_eq!(Ok(StateUpdate::LobbyCount(2)), pr2.recv());
+        disconnect_player(&gs, 1);
+        tick(&ticks);
+        assert!(pr1.try_recv().is_err());
+        assert_eq!(Ok(StateUpdate::LobbyCount(1)), pr2.recv());
     }
 }
