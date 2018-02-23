@@ -63,18 +63,26 @@ mod tests {
 
     #[test]
     fn server_comms1() {
-        thread::spawn(|| listen::<EchoGame>("0.0.0.0:12345".to_string(), "127.0.0.1".to_string()));
 
-        let uri = Url::parse("ws://localhost:12345").unwrap();
-        let mut ws = tungstenite::connect(uri).unwrap().0;
-        ws.write_message(tungstenite::Message::text("{\"StartGame\":null}".to_string()));
+        thread::spawn(||
+            listen::<EchoGame>("127.0.0.1:12345".to_string(), "127.0.0.1".to_string())
+        );
+
+        let mut ws = {
+            let uri = Url::parse("ws://127.0.0.1:12345").unwrap();
+            loop {
+                if let Ok((mut ws, _resp)) = tungstenite::connect(uri.clone()) {
+                    break ws;
+                }
+            }
+        };
+        assert!(ws.write_message(tungstenite::Message::text("{\"StartGame\":null}".to_string())).is_ok());
 
         assert_eq!("{\"LobbyCount\":1}", ws.read_message().unwrap().to_text().unwrap());
 
+        TcpStream::connect("127.0.0.1:12345").unwrap();
+        thread::sleep(Duration::from_millis(100));
 
-        TcpStream::connect("localhost:12345").unwrap();
-        thread::sleep(Duration::from_secs(1));
-
-        assert!(TcpStream::connect("localhost:12345").is_err());
+        assert!(TcpStream::connect("127.0.0.1:12345").is_err());
     }
 }
