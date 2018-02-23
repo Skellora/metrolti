@@ -14,11 +14,38 @@ enum MGameState {
     Game,
 }
 
+#[derive(Debug, Serialize)]
+enum StationType {
+    Circle,
+    //Triangle,
+    //Square,
+}
+
+#[derive(Debug, Serialize)]
+struct Station {
+    t: StationType,
+    position: (i8, i8),
+}
+
+#[derive(Debug, Serialize)]
+struct MetroModel {
+    stations: Vec<Station>,
+}
+
+impl MetroModel {
+    pub fn new() -> Self {
+        Self {
+            stations: Vec::new(),
+        }
+    }
+}
+
 pub struct MetroGame<T: Ticker> {
     state: MGameState,
     r: Receiver<InputEvent>,
     player_out: HashMap<PlayerId, Player>,
     ticker: T,
+    model: MetroModel,
 }
 
 impl<T: Ticker> Game<T> for MetroGame<T> {
@@ -28,6 +55,7 @@ impl<T: Ticker> Game<T> for MetroGame<T> {
             r: event_loop,
             player_out: HashMap::new(),
             ticker: ticker,
+            model: MetroModel::new(),
         }
     }
     fn main(&mut self) {
@@ -63,16 +91,25 @@ impl<T: Ticker> MetroGame<T> {
             InputEvent::Disconnection(p_id) => {
                 self.player_out.remove(&p_id);
             }
-            InputEvent::PlayerAction(p_id, action) => {
+            InputEvent::PlayerAction(_p_id, action) => {
                 match action {
-                    PlayerAction::StartGame => { self.state = MGameState::Game }
-                    _ => {}
+                    PlayerAction::StartGame => { 
+                        self.state = MGameState::Game;
+                        self.model = MetroModel::new();
+                        self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
+                    }
                 }
             }
         }
     }
     pub fn update(&mut self) {}
     pub fn output(&mut self) {
+        match self.state {
+            MGameState::Lobby => self.lobby_output(),
+            MGameState::Game => {},
+        }
+    }
+    pub fn lobby_output(&mut self) {
         let connected = self.player_out.len();
         for p in self.player_out.values() {
             p.send_message(StateUpdate::LobbyCount(connected as u8));
