@@ -15,6 +15,7 @@ pub enum PlayerAction {
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum StateUpdate {
     LobbyCount(u8),
+    GameState(MetroModel),
 }
 
 // This would probably be better off with state-handling trait and types
@@ -24,21 +25,21 @@ enum MGameState {
     Game,
 }
 
-#[derive(Debug, Serialize)]
-enum StationType {
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub enum StationType {
     Circle,
     //Triangle,
     //Square,
 }
 
-#[derive(Debug, Serialize)]
-struct Station {
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub struct Station {
     t: StationType,
     position: (i8, i8),
 }
 
-#[derive(Debug, Serialize)]
-struct MetroModel {
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub struct MetroModel {
     stations: Vec<Station>,
 }
 
@@ -116,7 +117,12 @@ impl<T: Ticker> MetroGame<T> {
     pub fn output(&mut self) {
         match self.state {
             MGameState::Lobby => self.lobby_output(),
-            MGameState::Game => {},
+            MGameState::Game => self.game_output(),
+        }
+    }
+    pub fn game_output(&mut self) {
+        for p in self.player_out.values() {
+            p.send_message(StateUpdate::GameState(self.model.clone()));
         }
     }
     pub fn lobby_output(&mut self) {
