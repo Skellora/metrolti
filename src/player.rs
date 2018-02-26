@@ -9,7 +9,8 @@ use tungstenite::{WebSocket, Message};
 use tungstenite::error::Error;
 use tungstenite::protocol::Role;
 
-use events::{InputEvent, StateUpdate};
+use events::{InputEvent};
+use metro_game::StateUpdate;
 use player_id::*;
 use sexpect::*;
 

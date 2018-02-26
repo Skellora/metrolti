@@ -32,6 +32,7 @@ mod tests {
 
     use super::*;
     use events::*;
+    use metro_game::*;
     use std::net::TcpStream;
     use std::sync::mpsc::Receiver;
     use std::time::{Duration};

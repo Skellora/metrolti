@@ -1,11 +1,21 @@
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 
-use events::{ InputEvent, StateUpdate, PlayerAction };
+use events::{ InputEvent };
 use game::Game;
 use player_id::*;
 use player::Player;
 use ticks::*;
+
+#[derive(Debug, Deserialize)]
+pub enum PlayerAction {
+    StartGame,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub enum StateUpdate {
+    LobbyCount(u8),
+}
 
 // This would probably be better off with state-handling trait and types
 #[derive(Debug, Eq, PartialEq)]
