@@ -1,10 +1,12 @@
 use iron::prelude::*;
 use iron::status;
 use iron::middleware::Handler;
+use mount::Mount;
+use staticfile::Static;
 
 use handlebars_iron::*;
 
-pub fn startup_web_frontend(address: String, websocket_address: String) {
+pub fn startup_web_frontend(address: String, websocket_address: String, static_path: String) {
     let data = WebData {
         websocket: websocket_address.clone(),
         test: "Test".to_string(),
@@ -20,8 +22,12 @@ pub fn startup_web_frontend(address: String, websocket_address: String) {
     }
 
     chain.link_after(hbse);
+
+    let mut mount = Mount::new();
+    mount.mount("/", chain)
+         .mount("static", Static::new(static_path));
   
-    Iron::new(chain).http(address).unwrap();
+    Iron::new(mount).http(address).unwrap();
 }
 
 #[derive(Debug, Serialize)]

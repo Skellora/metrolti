@@ -1,4 +1,6 @@
 extern crate iron;
+extern crate mount;
+extern crate staticfile;
 extern crate handlebars;
 extern crate handlebars_iron;
 extern crate tungstenite;
