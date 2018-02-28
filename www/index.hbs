@@ -1,24 +1,23 @@
 <html>
   <head>
+    <script type="text/javascript" src="/static/metro.js"></script>
     <script>
+      window.onerror = function(m) {
+        alert(m);
+        return true;
+      };
       function clicky() {
-        let ws = new WebSocket('ws://{{ websocket }}');
-        document.getElementById('status').innerText = 'Connecting';
-        ws.onopen = function() {
-          document.getElementById('status').innerText = 'Connected';
-        }
-        ws.onmessage = function(m) {
-          document.getElementById('count').innerText = JSON.parse(m.data).LobbyCount;
-        };
-        ws.onerror = function(m) {
-          alert(JSON.stringify(m));
-        };
+        let statusEl = document.getElementById('status');
+        let lobbyEl = document.getElementById('count');
+        let canvasEl = document.getElementById('game-canvas');
+        metro.setup('ws://{{ websocket }}', statusEl, lobbyEl, canvasEl);
       }
     </script>
   </head>
   <body>
     <h2>{{ test }}</h2>
     <div id='status'>?</div>
+    <canvas id='game-canvas' width='510' height='667'> </canvas>
     <b>Lobby: </b>
     <span id='count'>?</span>
     <button onclick="clicky('works');">Button</button>
