@@ -30,6 +30,8 @@ impl Ticker for TPSTicker {
         let next_tick_wait = self.tps.checked_sub(self.last.elapsed());
         if let Some(wait) = next_tick_wait {
             thread::sleep(wait);
+        } else {
+            println!("Server can't keep up");
         }
         self.last = Instant::now();
     }
