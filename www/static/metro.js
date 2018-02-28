@@ -12,6 +12,11 @@ let metro = (function() {
     displayElements.lobby.innerText = game_model.lobby_count;
   }
 
+  function loop() {
+    draw();
+    window.requestAnimationFrame(loop);
+  }
+
   function handleWebSocketMessage(jsonM) {
     if (jsonM.LobbyCount) {
       game_model.lobby_count = jsonM.LobbyCount;
@@ -39,7 +44,12 @@ let metro = (function() {
     };
   }
 
+  function start() {
+    window.requestAnimationFrame(loop);
+  }
+
   return {
     setup: setup,
+    start: start,
   };
 })();

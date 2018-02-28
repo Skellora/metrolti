@@ -11,6 +11,7 @@
         let lobbyEl = document.getElementById('count');
         let canvasEl = document.getElementById('game-canvas');
         metro.setup('ws://{{ websocket }}', statusEl, lobbyEl, canvasEl);
+        metro.start();
       }
     </script>
   </head>
