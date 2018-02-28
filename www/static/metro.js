@@ -5,8 +5,8 @@ let metro = (function() {
   }
 
   let displayElements = {};
-  function hideElement(el) { el.style.visibility = 'collapse'; }
-  function showElement(el) { el.style.visibility = 'visible'; }
+  function hideElement(el) { el.style.display = 'none'; }
+  function showElement(el) { el.style.display = 'initial'; }
 
   function draw() {
     displayElements.lobby.innerText = game_model.lobby_count;
