@@ -2,7 +2,7 @@ let metro = (function() {
   let game_started = false;
   let game_model = {
     lobby_count: 0,
-  }
+  };
 
   let displayElements = {};
   function hideElement(el) { el.style.display = 'none'; }
@@ -35,7 +35,7 @@ let metro = (function() {
     statusEl.innerText = 'Connecting';
     ws.onopen = function() {
       statusEl.innerText = 'Connected';
-    }
+    };
     ws.onmessage = function(m) {
       handleWebSocketMessage(JSON.parse(m.data));
     };

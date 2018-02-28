@@ -1,0 +1,91 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "sourceType": "module"
+    },
+    "rules": {
+        "indent": [
+            "error",
+            2
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "curly": [
+          "error",
+          "all"
+        ],
+        "dot-location": [
+          "error",
+          "property"
+        ],
+        "no-use-before-define": [
+          "error"
+        ],
+        "array-bracket-newline": [
+          "error",
+          "consistent"
+        ],
+        "brace-style": [
+          "error",
+          "1tbs",
+          { "allowSingleLine": true }
+        ],
+        "block-spacing": [
+          "error"
+        ],
+        "comma-spacing": [
+          "error"
+        ],
+        "eol-last": [
+          "error"
+        ],
+        "func-call-spacing": [
+          "error"
+        ],
+        "key-spacing": [
+          "error"
+        ],
+        "keyword-spacing": [
+          "error"
+        ],
+        "no-trailing-spaces": [
+          "error"
+        ],
+        "no-unneeded-ternary": [
+          "error"
+        ],
+        "no-whitespace-before-property": [
+          "error"
+        ],
+        "semi-spacing": [
+          "error"
+        ],
+        "space-before-blocks": [
+          "error"
+        ],
+        "space-infix-ops": [
+          "error"
+        ],
+        "switch-colon-spacing": [
+          "error"
+        ],
+        "no-unused-vars": [
+          "error",
+          { "varsIgnorePattern": "metro" }
+        ]
+    }
+}
