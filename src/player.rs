@@ -47,8 +47,10 @@ fn handle_player_out(from_server: Receiver<StateUpdate>, out_stream: TcpStream, 
     let mut ws = WebSocket::from_raw_socket(out_stream, Role::Server);
     for m in from_server.iter() {
         let serialized = serde_json::to_string(&m).expect("serualize");
-        ws.write_message(Message::text(serialized))
-          .sexpect(&format!("Failed to forward message to {:?}", id));
+        if let Err(e) = ws.write_message(Message::text(serialized)) {
+            println!("Failed to forward message to {:?}: {:?}", id, e);
+            break;
+        }
     }
     println!("Dropping {:?} out handler", id);
 }
