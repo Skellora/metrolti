@@ -90,10 +90,21 @@ impl<T: Ticker> MetroGame<T> {
     fn handle_event(&mut self, ev: InputEvent) {
         match self.state {
             MGameState::Lobby => self.handle_lobby_event(ev),
-            MGameState::Game => {},
+            MGameState::Game => self.handle_game_event(ev),
         }
     }
 
+    fn handle_game_event(&mut self, ev: InputEvent) {
+        match ev {
+            InputEvent::Connection(p_id, p) => {
+                self.player_out.insert(p_id, p);
+            }
+            InputEvent::Disconnection(p_id) => {
+                self.player_out.remove(&p_id);
+            }
+            InputEvent::PlayerAction(_p_id, _action) => { }
+        }
+    }
     fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
             InputEvent::Connection(p_id, p) => {
