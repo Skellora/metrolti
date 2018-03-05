@@ -95,7 +95,12 @@ let metro = (function() {
     gl.clearColor(0.2, 0.3, 0.3, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     program.use();
-    let ortho = makeOrtho(-100, 100, 100, -100, -1, 1);
+    let canvasWidth = displayElements.canvas.width;
+    let canvasHeight = displayElements.canvas.height;
+    let ortho =
+      makeOrtho(-(canvasWidth / 2), (canvasWidth / 2)
+        , (canvasHeight / 2), -(canvasHeight / 2)
+        , -1, 1);
     program.setUniformMat4('projection', ortho);
 
     glShapes.drawShape(gl, program, glShapes.square(gl), [0, 0], [1, 0, 0]);
