@@ -84,6 +84,8 @@ let metro = (function() {
   let game_model = {
     lobby_count: 0,
   };
+  let station_size = 30;
+  let station_border_size = 5;
 
   let displayElements = {};
   function hideElement(el) { el.style.display = 'none'; }
@@ -117,8 +119,8 @@ let metro = (function() {
         break;
       }
       if (shape !== null) {
-        glShapes.drawShape(gl, program, shape, station_pos, [0, 0, 0], 50);
-        glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], 40);
+        glShapes.drawShape(gl, program, shape, station_pos, [0, 0, 0], station_size + station_border_size);
+        glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size);
       }
     }
   }
