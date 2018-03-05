@@ -1,3 +1,55 @@
+/* global makeShaderProgram SetUpAttributes makeOrtho Matrix $V */
+const vertexShaderSource = `
+attribute vec2 aPos;
+
+uniform mat4 model;
+uniform mat4 projection;
+
+void main() {
+	gl_Position = projection * model  * vec4(aPos, 0.0, 1.0);
+}
+`;
+const fragmentShaderSource = `
+uniform lowp vec4 colour;
+
+void main() {
+	gl_FragColor = colour;
+}
+`;
+
+let glShapes = (function() {
+  let drawShape = function(gl, program, shape, pos, colour) {
+    program.setUniformVec4('colour', colour[0], colour[1], colour[2], 1.0);
+    let scale = Matrix.Diagonal([10, 10, 0, 1]);
+    let m = Matrix.Translation($V([pos[0], pos[1], 0])).x(scale);
+    program.setUniformMat4('model', m);
+    gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  };
+
+  let square = function(gl) {
+    const vertices = [
+      0, 0,
+      0, 1,
+      1, 0,
+      1, 1,
+      1, 0,
+      0, 1
+    ];
+    let VBO = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    return {
+      vertices: VBO,
+    };
+  };
+
+  return {
+    square: square,
+    drawShape: drawShape,
+  };
+})();
+
 let metro = (function() {
   let game_started = false;
   let game_model = {
@@ -7,9 +59,24 @@ let metro = (function() {
   let displayElements = {};
   function hideElement(el) { el.style.display = 'none'; }
   function showElement(el) { el.style.display = 'initial'; }
+  let gl = null;
+  let program = null;
+
+  function draw_state() {
+    gl.clearColor(0.2, 0.3, 0.3, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    program.use();
+    SetUpAttributes(gl, program, [['aPos', 2]], 4);
+    let ortho = makeOrtho(-100, 100, 100, -100, -1, 1);
+    program.setUniformMat4('projection', ortho);
+
+    glShapes.drawShape(gl, program, glShapes.square(gl), [0, 0], [1, 0, 0]);
+  }
 
   function draw() {
     displayElements.lobby.innerText = game_model.lobby_count;
+    if (!game_started) { return; }
+    draw_state();
   }
 
   function loop() {
@@ -20,6 +87,13 @@ let metro = (function() {
   function handleWebSocketMessage(jsonM) {
     if (jsonM.LobbyCount) {
       game_model.lobby_count = jsonM.LobbyCount;
+    }
+    if (jsonM.GameState) {
+      game_model.state = jsonM.GameState;
+      if (!game_started) {
+        showElement(displayElements.canvas);
+        game_started = true;
+      }
     }
   }
 
@@ -42,6 +116,14 @@ let metro = (function() {
     ws.onerror = function(m) {
       alert(JSON.stringify(m));
     };
+
+    gl = canvasEl.getContext('webgl');
+    program = makeShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
+    window.addEventListener('touchstart', function() {
+      if (!game_started) {
+        ws.send('{ "StartGame": null }');
+      }
+    });
   }
 
   function start() {

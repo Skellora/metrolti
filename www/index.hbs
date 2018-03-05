@@ -1,9 +1,12 @@
 <html>
   <head>
+    <script type="text/javascript" src="/static/Shader.js"></script>
+    <script type="text/javascript" src="/static/sylvester.js"></script>
+    <script type="text/javascript" src="/static/glUtils.js"></script>
     <script type="text/javascript" src="/static/metro.js"></script>
     <script>
-      window.onerror = function(m) {
-        alert(m);
+      window.onerror = function(m, _, line) {
+        alert(m + ":" + line);
         return true;
       };
       function clicky() {
