@@ -51,7 +51,7 @@ let glShapes = (function() {
   };
 
   let circle = function(gl) {
-    let vertexCount = 10;
+    let vertexCount = 40;
     let angleInc = 2 * Math.PI / vertexCount;
     let vertices = [];
     for (let i = 0; i < vertexCount; i++) {
