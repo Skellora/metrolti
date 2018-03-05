@@ -18,9 +18,9 @@ void main() {
 `;
 
 let glShapes = (function() {
-  let drawShape = function(gl, program, shape, pos, colour) {
+  let drawShape = function(gl, program, shape, pos, colour, size) {
     program.setUniformVec4('colour', colour[0], colour[1], colour[2], 1.0);
-    let scale = Matrix.Diagonal([10, 10, 0, 1]);
+    let scale = Matrix.Diagonal([size, size, 0, 1]);
     let m = Matrix.Translation($V([pos[0], pos[1], 0])).x(scale);
     program.setUniformMat4('model', m);
     gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
@@ -103,8 +103,7 @@ let metro = (function() {
         , -1, 1);
     program.setUniformMat4('projection', ortho);
 
-    glShapes.drawShape(gl, program, glShapes.square(gl), [0, 0], [1, 0, 0]);
-    glShapes.drawShape(gl, program, glShapes.circle(gl), [0, 0], [0, 1, 0]);
+    glShapes.drawShape(gl, program, glShapes.circle(gl), [0, 0], [0, 1, 0], 50);
   }
 
   function draw() {
