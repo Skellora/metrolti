@@ -109,7 +109,12 @@ let metro = (function() {
       let station_pos = station.position;
       let shape = null;
       switch (station_type) {
-      case 'Circle': shape = glShapes.circle(gl);
+      case 'Circle':
+        shape = glShapes.circle(gl);
+        break;
+      case 'Square':
+        shape = glShapes.square(gl);
+        break;
       }
       if (shape !== null) {
         glShapes.drawShape(gl, program, shape, station_pos, [0, 0, 0], 50);

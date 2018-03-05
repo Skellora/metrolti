@@ -29,7 +29,7 @@ enum MGameState {
 pub enum StationType {
     Circle,
     //Triangle,
-    //Square,
+    Square,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
@@ -119,6 +119,7 @@ impl<T: Ticker> MetroGame<T> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
+                        self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
                     }
                 }
             }
