@@ -1,3 +1,7 @@
+if (!log) {
+  var log = alert;
+}
+
 function loadShader(gl, type, source) {
     var shader = gl.createShader(type);
     gl.shaderSource(shader, source);
