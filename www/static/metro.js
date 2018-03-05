@@ -103,7 +103,19 @@ let metro = (function() {
         , -1, 1);
     program.setUniformMat4('projection', ortho);
 
-    glShapes.drawShape(gl, program, glShapes.circle(gl), [0, 0], [0, 1, 0], 50);
+    for (let i = 0; i < game_model.state.stations.length; i++) {
+      let station = game_model.state.stations[i];
+      let station_type = station.t;
+      let station_pos = station.position;
+      let shape = null;
+      switch (station_type) {
+      case 'Circle': shape = glShapes.circle(gl);
+      }
+      if (shape !== null) {
+        glShapes.drawShape(gl, program, shape, station_pos, [0, 0, 0], 50);
+        glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], 40);
+      }
+    }
   }
 
   function draw() {
@@ -125,6 +137,7 @@ let metro = (function() {
       game_model.state = jsonM.GameState;
       if (!game_started) {
         showElement(displayElements.canvas);
+        alert(JSON.stringify(jsonM.GameState));
         game_started = true;
       }
     }
