@@ -24,7 +24,15 @@ let glShapes = (function() {
     let m = Matrix.Translation($V([pos[0], pos[1], 0])).x(scale);
     program.setUniformMat4('model', m);
     gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    SetUpAttributes(gl, program, [['aPos', 2]], 4);
+    gl.drawArrays(gl.TRIANGLES, 0, shape.count);
+  };
+
+  let bufferFromVertices = function(gl, vertices) {
+    let VBO = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    return VBO;
   };
 
   let square = function(gl) {
@@ -36,16 +44,37 @@ let glShapes = (function() {
       1, 0,
       0, 1
     ];
-    let VBO = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     return {
-      vertices: VBO,
+      vertices: bufferFromVertices(gl, vertices),
+      count: 6,
+    };
+  };
+
+  let circle = function(gl) {
+    let vertexCount = 10;
+    let angleInc = 2 * Math.PI / vertexCount;
+    let vertices = [];
+    for (let i = 0; i < vertexCount; i++) {
+      vertices.push(0);
+      vertices.push(0);
+      let x = Math.cos(i * angleInc) * 0.5;
+      let y = Math.sin(i * angleInc) * 0.5;
+      vertices.push(x);
+      vertices.push(y);
+      let x2 = Math.cos((i + 1) * angleInc) * 0.5;
+      let y2 = Math.sin((i + 1) * angleInc) * 0.5;
+      vertices.push(x2);
+      vertices.push(y2);
+    }
+    return {
+      vertices: bufferFromVertices(gl, vertices),
+      count: vertexCount * 3,
     };
   };
 
   return {
     square: square,
+    circle: circle,
     drawShape: drawShape,
   };
 })();
@@ -66,11 +95,11 @@ let metro = (function() {
     gl.clearColor(0.2, 0.3, 0.3, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     program.use();
-    SetUpAttributes(gl, program, [['aPos', 2]], 4);
     let ortho = makeOrtho(-100, 100, 100, -100, -1, 1);
     program.setUniformMat4('projection', ortho);
 
     glShapes.drawShape(gl, program, glShapes.square(gl), [0, 0], [1, 0, 0]);
+    glShapes.drawShape(gl, program, glShapes.circle(gl), [0, 0], [0, 1, 0]);
   }
 
   function draw() {
