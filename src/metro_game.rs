@@ -52,6 +52,7 @@ pub struct Edge {
 pub struct MetroModel {
     stations: Vec<Station>,
     edges: Vec<Edge>,
+    station_size: u8,
 }
 
 impl MetroModel {
@@ -59,6 +60,7 @@ impl MetroModel {
         Self {
             stations: Vec::new(),
             edges: Vec::new(),
+            station_size: 20u8,
         }
     }
 }
