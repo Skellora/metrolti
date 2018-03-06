@@ -179,6 +179,11 @@ mod tests {
         (gs, (tsw, trs))
     }
 
+    fn send_player_action(sender: &Sender<InputEvent>, id: u16, action: PlayerAction) {
+        sender.send(InputEvent::PlayerAction(PlayerId::new(id), action))
+            .expect("Test sending player action");
+    }
+
     fn tick(&(ref tsw, ref trs): &(Sender<()>, Receiver<()>)) {
         tsw.send(()).unwrap();
         trs.recv().unwrap();
@@ -198,5 +203,28 @@ mod tests {
         tick(&ticks);
         assert!(pr1.try_recv().is_err());
         assert_eq!(Ok(StateUpdate::LobbyCount(1)), pr2.recv());
+    }
+
+    fn assert_is_game_start(update: &StateUpdate) {
+        match *update {
+            StateUpdate::GameState(ref state) => {
+                assert_eq!(2, state.stations.len());
+            }
+            _ => {
+                panic!("{:?} is not a GameState", update);
+            }
+        }
+    }
+
+    #[test]
+    fn game_progression() {
+        let (gs, ticks) = start_test_game();
+        let pr1 = connect_player(&gs, 1);
+        let pr2 = connect_player(&gs, 2);
+        tick(&ticks);
+        send_player_action(&gs, 1, PlayerAction::StartGame);
+        tick(&ticks);
+        assert_is_game_start(&pr1.recv().unwrap());
+        assert_is_game_start(&pr2.recv().unwrap());
     }
 }
