@@ -94,7 +94,7 @@ let metro = (function() {
   let program = null;
 
   function draw_state() {
-    gl.clearColor(0.2, 0.3, 0.3, 1.0);
+    gl.clearColor(0.945, 0.941, 0.922, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     program.use();
     let canvasWidth = displayElements.canvas.width;
