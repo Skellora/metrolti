@@ -10,6 +10,7 @@ use ticks::*;
 #[derive(Debug, Deserialize)]
 pub enum PlayerAction {
     StartGame,
+    ConnectStations,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -102,7 +103,15 @@ impl<T: Ticker> MetroGame<T> {
             InputEvent::Disconnection(p_id) => {
                 self.player_out.remove(&p_id);
             }
-            InputEvent::PlayerAction(_p_id, _action) => { }
+            InputEvent::PlayerAction(_p_id, action) => { 
+                match action {
+                    PlayerAction::ConnectStations => {
+                    }
+                    PlayerAction::StartGame => {
+                        // Game is already started
+                    }
+                }
+            }
         }
     }
     fn handle_lobby_event(&mut self, ev: InputEvent) {
@@ -120,6 +129,10 @@ impl<T: Ticker> MetroGame<T> {
                         self.model = MetroModel::new();
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
                         self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
+                    }
+                    _ => {
+                        // It's unlikelu that there will be any more events that
+                        // have an effect in the lobby
                     }
                 }
             }
