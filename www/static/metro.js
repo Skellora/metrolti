@@ -35,6 +35,18 @@ let glShapes = (function() {
     return VBO;
   };
 
+  let triangle = function(gl) {
+    const vertices = [
+      -0.5, 0.5,
+      0, -0.5,
+      0.5, 0.5,
+    ];
+    return {
+      vertices: bufferFromVertices(gl, vertices),
+      count: 3,
+    };
+  };
+
   let square = function(gl) {
     const vertices = [
       -0.5, -0.5,
@@ -73,6 +85,7 @@ let glShapes = (function() {
   };
 
   return {
+    triangle: triangle,
     square: square,
     circle: circle,
     drawShape: drawShape,
@@ -117,6 +130,9 @@ let metro = (function() {
         break;
       case 'Square':
         shape = glShapes.square(gl);
+        break;
+      case 'Triangle':
+        shape = glShapes.triangle(gl);
         break;
       }
       if (shape !== null) {

@@ -29,7 +29,7 @@ enum MGameState {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub enum StationType {
     Circle,
-    //Triangle,
+    Triangle,
     Square,
 }
 
@@ -143,6 +143,7 @@ impl<T: Ticker> MetroGame<T> {
                         self.model = MetroModel::new();
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
                         self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
+                        self.model.stations.push(Station { t: StationType::Triangle, position: (30, 30) });
                     }
                     _ => {
                         // It's unlikelu that there will be any more events that
@@ -235,7 +236,7 @@ mod tests {
     fn assert_is_game_start(update: &StateUpdate) {
         match *update {
             StateUpdate::GameState(ref state) => {
-                assert_eq!(2, state.stations.len());
+                assert_eq!(3, state.stations.len());
                 assert_eq!(0, state.edges.len());
             }
             _ => {
