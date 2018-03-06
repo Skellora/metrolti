@@ -10,7 +10,7 @@ use ticks::*;
 #[derive(Debug, Deserialize)]
 pub enum PlayerAction {
     StartGame,
-    ConnectStations,
+    ConnectStations(StationId, StationId),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -33,6 +33,9 @@ pub enum StationType {
     Square,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct StationId(usize);
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Station {
     t: StationType,
@@ -40,14 +43,22 @@ pub struct Station {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub struct Edge {
+    origin: StationId,
+    destination: StationId,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct MetroModel {
     stations: Vec<Station>,
+    edges: Vec<Edge>,
 }
 
 impl MetroModel {
     pub fn new() -> Self {
         Self {
             stations: Vec::new(),
+            edges: Vec::new(),
         }
     }
 }
@@ -105,7 +116,8 @@ impl<T: Ticker> MetroGame<T> {
             }
             InputEvent::PlayerAction(_p_id, action) => { 
                 match action {
-                    PlayerAction::ConnectStations => {
+                    PlayerAction::ConnectStations(src, tgt) => {
+                        self.model.edges.push(Edge { origin: src, destination: tgt });
                     }
                     PlayerAction::StartGame => {
                         // Game is already started
@@ -222,6 +234,21 @@ mod tests {
         match *update {
             StateUpdate::GameState(ref state) => {
                 assert_eq!(2, state.stations.len());
+                assert_eq!(0, state.edges.len());
+            }
+            _ => {
+                panic!("{:?} is not a GameState", update);
+            }
+        }
+    }
+    fn assert_has_edge(update: &StateUpdate, src: &StationId, tgt: &StationId) {
+        match *update {
+            StateUpdate::GameState(ref state) => {
+                let expected_edge = Edge {
+                    origin: src.clone(),
+                    destination: tgt.clone(),
+                };
+                assert_eq!(expected_edge, state.edges[0]);
             }
             _ => {
                 panic!("{:?} is not a GameState", update);
@@ -234,10 +261,15 @@ mod tests {
         let (gs, ticks) = start_test_game();
         let pr1 = connect_player(&gs, 1);
         let pr2 = connect_player(&gs, 2);
-        tick(&ticks);
         send_player_action(&gs, 1, PlayerAction::StartGame);
         tick(&ticks);
         assert_is_game_start(&pr1.recv().unwrap());
         assert_is_game_start(&pr2.recv().unwrap());
+        let attemptSrc = StationId(0);
+        let attemptTgt = StationId(1);
+        send_player_action(&gs, 1, PlayerAction::ConnectStations(attemptSrc.clone(), attemptTgt.clone()));
+        tick(&ticks);
+        assert_has_edge(&pr1.recv().unwrap(), &attemptSrc, &attemptTgt);
+        assert_has_edge(&pr2.recv().unwrap(), &attemptSrc, &attemptTgt);
     }
 }
