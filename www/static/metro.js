@@ -153,21 +153,26 @@ let metro = (function() {
     window.requestAnimationFrame(loop);
   }
 
-  function handleWebSocketMessage(jsonM) {
-    if (jsonM.LobbyCount) {
-      game_model.lobby_count = jsonM.LobbyCount;
+  let ws = null;
+  function sendWebSocketMessage(obj) {
+    if (!ws) { return; }
+    ws.send(JSON.stringify(obj));
+  }
+
+  function handleWebSocketMessage(message) {
+    if (message.LobbyCount) {
+      game_model.lobby_count = message.LobbyCount;
     }
-    if (jsonM.GameState) {
-      game_model.state = jsonM.GameState;
+    if (message.GameState) {
+      game_model.state = message.GameState;
       if (!game_started) {
         showElement(displayElements.canvas);
-        alert(JSON.stringify(jsonM.GameState));
+        alert(JSON.stringify(message.GameState));
         game_started = true;
       }
     }
   }
 
-  let ws = null;
   function setup(websocketAddress, statusEl, lobbyEl, canvasEl) {
     hideElement(canvasEl);
     showElement(lobbyEl);
@@ -191,7 +196,7 @@ let metro = (function() {
     program = makeShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
     window.addEventListener('touchstart', function() {
       if (!game_started) {
-        ws.send('{ "StartGame": null }');
+        sendWebSocketMessage({ StartGame: null });
       }
     });
   }
