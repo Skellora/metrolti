@@ -97,6 +97,7 @@ let metro = (function() {
   let game_model = {
     lobby_count: 0,
   };
+  let touched_station = null;
 
   let displayElements = {};
   function hideElement(el) { el.style.display = 'none'; }
@@ -104,16 +105,19 @@ let metro = (function() {
   let gl = null;
   let program = null;
 
+  function getProjectionMatrix() {
+    let canvasWidth = displayElements.canvas.width;
+    let canvasHeight = displayElements.canvas.height;
+    return makeOrtho(-(canvasWidth / 2), (canvasWidth / 2)
+      , (canvasHeight / 2), -(canvasHeight / 2)
+      , -1, 1);
+  }
+
   function draw_state() {
     gl.clearColor(0.945, 0.941, 0.922, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     program.use();
-    let canvasWidth = displayElements.canvas.width;
-    let canvasHeight = displayElements.canvas.height;
-    let ortho =
-      makeOrtho(-(canvasWidth / 2), (canvasWidth / 2)
-        , (canvasHeight / 2), -(canvasHeight / 2)
-        , -1, 1);
+    let ortho = getProjectionMatrix();
     program.setUniformMat4('projection', ortho);
 
     let station_size = game_model.state.station_size;
@@ -136,7 +140,11 @@ let metro = (function() {
         break;
       }
       if (shape !== null) {
-        glShapes.drawShape(gl, program, shape, station_pos, [0, 0, 0], station_size);
+        let colour = [0, 0, 0];
+        if (i === touched_station) {
+          colour = [1, 0, 0];
+        }
+        glShapes.drawShape(gl, program, shape, station_pos, colour, station_size);
         glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size);
       }
     }
@@ -153,6 +161,49 @@ let metro = (function() {
     window.requestAnimationFrame(loop);
   }
 
+  function canvasPointToGlPoint(canvasX, canvasY) {
+    let halfCanvasWidth = displayElements.canvas.width / 2;
+    let halfCanvasHeight = displayElements.canvas.height / 2;
+    let centeredX = canvasX - halfCanvasWidth;
+    let centeredY = canvasY - halfCanvasHeight;
+    let glX = centeredX / halfCanvasWidth;
+    let glY = -(centeredY / halfCanvasHeight);
+    return [glX, glY];
+  }
+
+  function getWorldCoords(canvasX, canvasY) {
+    let glPoint = canvasPointToGlPoint(canvasX, canvasY);
+    let projection = getProjectionMatrix();
+    let unProjection = projection.inverse();
+    if (unProjection === null) {
+      return [canvasX, canvasY];
+    }
+    let v = $V([glPoint[0], glPoint[1], 0, 1]).toDiagonalMatrix();
+    let unprojected = v.x(unProjection);
+    let worldX = unprojected.e(1, 1);
+    let worldY = unprojected.e(2, 2);
+    return [worldX, worldY];
+  }
+
+  function getStationAtScreenPoint(canvasX, canvasY) {
+    let worldPoint = getWorldCoords(canvasX, canvasY);
+    let x = worldPoint[0];
+    let y = worldPoint[1];
+    for (let i = 0; i < game_model.state.stations.length; i++) {
+      let station = game_model.state.stations[i];
+      let stationRight = station.position[0] + game_model.state.station_size / 2;
+      let stationLeft = station.position[0] - game_model.state.station_size / 2;
+      let stationTop = station.position[1] - game_model.state.station_size / 2;
+      let stationBottom = station.position[1] + game_model.state.station_size / 2;
+      if (x > stationRight) { continue; }
+      if (x < stationLeft) { continue; }
+      if (y > stationBottom) { continue; }
+      if (y < stationTop) { continue; }
+      return i;
+    }
+    return null;
+  }
+
   let ws = null;
   function sendWebSocketMessage(obj) {
     if (!ws) { return; }
@@ -167,10 +218,37 @@ let metro = (function() {
       game_model.state = message.GameState;
       if (!game_started) {
         showElement(displayElements.canvas);
-        alert(JSON.stringify(message.GameState));
         game_started = true;
       }
     }
+  }
+
+  function setupWebSocket(address) {
+    ws = new WebSocket(address);
+    displayElements.status.innerText = 'Connecting';
+    ws.onopen = function() {
+      displayElements.status.innerText = 'Connected';
+    };
+    ws.onmessage = function(m) {
+      handleWebSocketMessage(JSON.parse(m.data));
+    };
+    ws.onerror = function(m) {
+      alert(JSON.stringify(m));
+    };
+  }
+
+  function attachInputs() {
+    window.addEventListener('touchstart', function(e) {
+      if (!game_started) {
+        sendWebSocketMessage({ StartGame: null });
+      } else {
+        let touchPoint = e.touches[0];
+        let bounding = displayElements.canvas.getBoundingClientRect();
+        let x = touchPoint.pageX - bounding.x;
+        let y = touchPoint.pageY - bounding.y;
+        touched_station = getStationAtScreenPoint(x, y);
+      }
+    });
   }
 
   function setup(websocketAddress, statusEl, lobbyEl, canvasEl) {
@@ -180,25 +258,11 @@ let metro = (function() {
     displayElements.lobby = lobbyEl;
     displayElements.canvas = canvasEl;
 
-    ws = new WebSocket(websocketAddress);
-    statusEl.innerText = 'Connecting';
-    ws.onopen = function() {
-      statusEl.innerText = 'Connected';
-    };
-    ws.onmessage = function(m) {
-      handleWebSocketMessage(JSON.parse(m.data));
-    };
-    ws.onerror = function(m) {
-      alert(JSON.stringify(m));
-    };
+    setupWebSocket(websocketAddress);
 
     gl = canvasEl.getContext('webgl');
     program = makeShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
-    window.addEventListener('touchstart', function() {
-      if (!game_started) {
-        sendWebSocketMessage({ StartGame: null });
-      }
-    });
+    attachInputs();
   }
 
   function start() {
