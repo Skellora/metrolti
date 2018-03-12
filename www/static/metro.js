@@ -93,10 +93,11 @@ let glShapes = (function() {
     let distance = Math.sqrt((dY * dY) + (dX * dX));
 
     program.setUniformVec4('colour', 0, 0, 0, 1.0);
-    let scale = Matrix.Diagonal($V([distance, thickness, 0, 1]));
+    let scale = Matrix.Diagonal([distance, thickness, 0, 1]);
     let position = Matrix.Translation($V([midX, midY, 0]));
-    let rotation = Matrix.RotationZ(angle);
-    let m = rotation.x(position.x(scale));
+    let rotation = Matrix.RotationZ(angle).ensure4x4();
+    let centreOnThickness = Matrix.Translation($V([0, -thickness, 0]));
+    let m = centreOnThickness.x(rotation.x(position.x(scale)));
     program.setUniformMat4('model', m);
 
     let shape = square(gl);
