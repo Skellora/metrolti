@@ -84,11 +84,33 @@ let glShapes = (function() {
     };
   };
 
+  let drawLine = function(gl, program, startX, startY, endX, endY, thickness) {
+    let midX = (startX + endX) / 2;
+    let midY = (startY + endY) / 2;
+    let dY = endY - startY;
+    let dX = endX - startX;
+    let angle = Math.atan(dY / dX);
+    let distance = Math.sqrt((dY * dY) + (dX * dX));
+
+    program.setUniformVec4('colour', 0, 0, 0, 1.0);
+    let scale = Matrix.Diagonal($V([distance, thickness, 0, 1]));
+    let position = Matrix.Translation($V([midX, midY, 0]));
+    let rotation = Matrix.RotationZ(angle);
+    let m = rotation.x(position.x(scale));
+    program.setUniformMat4('model', m);
+
+    let shape = square(gl);
+    gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
+    SetUpAttributes(gl, program, [['aPos', 2]], 4);
+    gl.drawArrays(gl.TRIANGLES, 0, shape.count);
+  };
+
   return {
     triangle: triangle,
     square: square,
     circle: circle,
     drawShape: drawShape,
+    drawLine: drawLine,
   };
 })();
 
@@ -113,13 +135,7 @@ let metro = (function() {
       , -1, 1);
   }
 
-  function draw_state() {
-    gl.clearColor(0.945, 0.941, 0.922, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    program.use();
-    let ortho = getProjectionMatrix();
-    program.setUniformMat4('projection', ortho);
-
+  function draw_stations() {
     let station_size = game_model.state.station_size;
     let station_border_size = station_size / 5;
 
@@ -148,6 +164,28 @@ let metro = (function() {
         glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size);
       }
     }
+  }
+
+  function draw_edges() {
+    let edge_thickness = 10;
+    for (let i = 0; i < game_model.state.edges.length; i++) {
+      let edge = game_model.state.edges[i];
+      let srcStn = game_model.state.stations[edge.origin];
+      let tgtStn = game_model.state.stations[edge.destination];
+      if (srcStn && tgtStn) {
+        glShapes.drawLine(gl, program, srcStn.position[0], srcStn.position[1], tgtStn.position[0], tgtStn.position[1], edge_thickness);
+      }
+    }
+  }
+
+  function draw_state() {
+    gl.clearColor(0.945, 0.941, 0.922, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    program.use();
+    let ortho = getProjectionMatrix();
+    program.setUniformMat4('projection', ortho);
+    draw_edges();
+    draw_stations();
   }
 
   function draw() {
