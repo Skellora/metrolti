@@ -1,5 +1,8 @@
 extern crate metrolti_lib;
 
+extern crate serde;
+extern crate serde_json;
+
 extern crate tungstenite;
 extern crate url;
 
@@ -19,6 +22,7 @@ pub fn main() {
     server::listen::<game::MetroGame<TPSTicker>>("localhost:3004".to_string(), String::new());
 }
 
+#[derive(Debug)]
 enum DemoAction {
     WaitMessage(String),
     WaitTime(u64),
@@ -39,6 +43,8 @@ fn demo_player(addr: &str) {
         DemoAction::WaitMessage("{\"LobbyCount\":2}".to_string()),
         DemoAction::WaitTime(2),
         DemoAction::Act(game::PlayerAction::StartGame),
+        DemoAction::WaitTime(2),
+        DemoAction::Act(game::PlayerAction::ConnectStations(game::StationId(0), game::StationId(1))),
     ];
     let mut actions = actions_list.iter();
     let mut curr = actions.next();
@@ -54,13 +60,16 @@ fn demo_player(addr: &str) {
                 thread::sleep(Duration::from_secs(*s));
                 progress = true;
             }
-            Some(&DemoAction::Act(_)) => {
-                ws.write_message(tungstenite::Message::text("{\"StartGame\":null}".to_string())).expect("demo write");
+            Some(&DemoAction::Act(ref m)) => {
+                let serialized = serde_json::to_string(m).expect("demo serialize");
+                ws.write_message(tungstenite::Message::text(serialized)).expect("demo write");
+                progress = true;
             }
 
         }
         if progress {
             curr = actions.next();
+            println!("Moving on to {:?}", curr);
         }
     }
 }

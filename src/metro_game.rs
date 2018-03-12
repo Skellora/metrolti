@@ -7,7 +7,7 @@ use player_id::*;
 use player::Player;
 use ticks::*;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum PlayerAction {
     StartGame,
     ConnectStations(StationId, StationId),
@@ -34,7 +34,7 @@ pub enum StationType {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub struct StationId(usize);
+pub struct StationId(pub usize);
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Station {
