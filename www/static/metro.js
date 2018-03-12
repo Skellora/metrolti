@@ -151,7 +151,7 @@ let metro = (function() {
   }
 
   function draw() {
-    displayElements.lobby.innerText = game_model.lobby_count;
+    displayElements.count.innerText = game_model.lobby_count;
     if (!game_started) { return; }
     draw_state();
   }
@@ -217,7 +217,8 @@ let metro = (function() {
     if (message.GameState) {
       game_model.state = message.GameState;
       if (!game_started) {
-        showElement(displayElements.canvas);
+        showElement(displayElements.game);
+        hideElement(displayElements.lobby);
         game_started = true;
       }
     }
@@ -237,26 +238,59 @@ let metro = (function() {
     };
   }
 
+  function sendAddConnection(startId, endId) {
+    if (startId === null || endId === null) { return; }
+    sendWebSocketMessage({ ConnectStations: [ startId, endId ] });
+  }
+  function sendStartGame() {
+    sendWebSocketMessage({ StartGame: null });
+  }
+
+  function handleStationDown(stationId) {
+    touched_station = stationId;
+  }
+
+  function handleStationUp(stationId) {
+    if (touched_station === null) { return; }
+    if (stationId !== touched_station) {
+      sendAddConnection(touched_station, stationId);
+    }
+    touched_station = null;
+  }
+
   function attachInputs() {
     window.addEventListener('touchstart', function(e) {
       if (!game_started) {
-        sendWebSocketMessage({ StartGame: null });
+        sendStartGame();
       } else {
         let touchPoint = e.touches[0];
         let bounding = displayElements.canvas.getBoundingClientRect();
         let x = touchPoint.pageX - bounding.x;
         let y = touchPoint.pageY - bounding.y;
-        touched_station = getStationAtScreenPoint(x, y);
+        handleStationDown(getStationAtScreenPoint(x, y));
+      }
+    });
+    window.addEventListener('touchend', function(e) {
+      if (game_started) {
+        let touchPoint = e.changedTouches[0];
+        let bounding = displayElements.canvas.getBoundingClientRect();
+        let x = touchPoint.pageX - bounding.x;
+        let y = touchPoint.pageY - bounding.y;
+        handleStationUp(getStationAtScreenPoint(x, y));
       }
     });
   }
 
-  function setup(websocketAddress, statusEl, lobbyEl, canvasEl) {
-    hideElement(canvasEl);
+  function setup(websocketAddress, gameEl, lobbyEl, statusEl, countEl, canvasEl) {
+    hideElement(gameEl);
     showElement(lobbyEl);
     displayElements.status = statusEl;
     displayElements.lobby = lobbyEl;
     displayElements.canvas = canvasEl;
+    displayElements.count = countEl;
+    displayElements.game = gameEl;
+    canvasEl.width = document.body.clientWidth;
+    canvasEl.height = document.body.clientHeight;
 
     setupWebSocket(websocketAddress);
 

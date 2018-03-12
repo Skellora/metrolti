@@ -1,4 +1,4 @@
-<html>
+<html style="overflow:hidden;">
   <head>
     <script type="text/javascript" src="/static/Shader.js"></script>
     <script type="text/javascript" src="/static/sylvester.js"></script>
@@ -11,19 +11,25 @@
       };
       function clicky() {
         let statusEl = document.getElementById('status');
-        let lobbyEl = document.getElementById('count');
+        let countEl = document.getElementById('count');
         let canvasEl = document.getElementById('game-canvas');
-        metro.setup('ws://{{ websocket }}', statusEl, lobbyEl, canvasEl);
+        let gameEl = document.getElementById('game-content');
+        let lobbyEl = document.getElementById('lobby-content');
+        metro.setup('ws://{{ websocket }}', gameEl, lobbyEl, statusEl, countEl, canvasEl);
         metro.start();
       }
     </script>
   </head>
-  <body>
-    <h2>{{ test }}</h2>
-    <div id='status'>?</div>
-    <canvas id='game-canvas' width='510' height='667' style="display:none"> </canvas>
-    <b>Lobby: </b>
-    <span id='count'>?</span>
-    <button onclick="clicky('works');">Button</button>
+  <body style="overflow:hidden">
+    <div>
+      <div id='game-content'>
+        <canvas id='game-canvas' width='510' height='667'></canvas>
+      </div>
+      <div id='lobby-content'>
+        <div id='status'>?</div>
+        <b>Lobby: </b>
+        <span id='count'>?</span>
+        <button onclick="clicky('works');">Button</button>
+      </div>
   </body>
 </html>
