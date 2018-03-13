@@ -37,7 +37,12 @@ fn handle_player_in(to_server: Sender<InputEvent>, in_stream: TcpStream, id: Pla
                 println!("{:?} disconnected", id);
                 break;
             }
-            _ => {}
+            Err(e) => {
+                println!("{:?}: somoething else went wrong {:?}", id, e);
+                to_server.send(InputEvent::Disconnection(id))
+                    .sexpect("letting the server know");
+                break;
+            }
         }
     }
     println!("Dropping {:?} in handler", id);
