@@ -50,7 +50,7 @@ fn demo_player(addr: &str) {
     let mut curr = actions.next();
     loop {
         let message = ws.read_message();
-        let mut progress = false;
+        let progress;
         match curr {
             None => { return; }
             Some(&DemoAction::WaitMessage(ref m)) => {
