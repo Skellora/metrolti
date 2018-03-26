@@ -93,10 +93,10 @@ let glShapes = (function() {
     let distance = Math.sqrt((dY * dY) + (dX * dX));
 
     program.setUniformVec4('colour', 0, 0, 0, 1.0);
-    let scale = Matrix.Diagonal([distance, thickness, 0, 1]);
-    let position = Matrix.Translation($V([midX, midY - thickness, 0]));
+    let scale = Matrix.Diagonal([distance, thickness, 1, 1]);
+    let position = Matrix.Translation($V([midX, midY, 0]));
     let rotation = Matrix.RotationZ(angle).ensure4x4();
-    let m = rotation.x(position.x(scale));
+    let m = position.x(rotation.x(scale));
     program.setUniformMat4('model', m);
 
     let shape = square(gl);
@@ -167,13 +167,15 @@ let metro = (function() {
   }
 
   function draw_edges() {
-    let edge_thickness = 10;
+    let edge_thickness = 8;
     for (let i = 0; i < game_model.state.edges.length; i++) {
       let edge = game_model.state.edges[i];
       let srcStn = game_model.state.stations[edge.origin];
       let tgtStn = game_model.state.stations[edge.destination];
+      let via = edge.via_point;
       if (srcStn && tgtStn) {
-        glShapes.drawLine(gl, program, srcStn.position[0], srcStn.position[1], tgtStn.position[0], tgtStn.position[1], edge_thickness);
+        glShapes.drawLine(gl, program, srcStn.position[0], srcStn.position[1], via[0], via[1], edge_thickness);
+        glShapes.drawLine(gl, program, via[0], via[1], tgtStn.position[0], tgtStn.position[1], edge_thickness);
       }
     }
   }

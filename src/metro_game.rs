@@ -36,16 +36,19 @@ pub enum StationType {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct StationId(pub usize);
 
+pub type Point = (i8, i8);
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Station {
     t: StationType,
-    position: (i8, i8),
+    position: Point,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Edge {
     origin: StationId,
     destination: StationId,
+    via_point: Point,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
@@ -62,6 +65,10 @@ impl MetroModel {
             edges: Vec::new(),
             station_size: 20u8,
         }
+    }
+    pub fn get_station(&self, id: &StationId) -> Option<&Station> {
+        let &StationId(index) = id;
+        self.stations.get(index)
     }
 }
 
@@ -119,7 +126,8 @@ impl<T: Ticker> MetroGame<T> {
             InputEvent::PlayerAction(_p_id, action) => { 
                 match action {
                     PlayerAction::ConnectStations(src, tgt) => {
-                        self.model.edges.push(Edge { origin: src, destination: tgt });
+                        let via = self.get_via_point_between(&src, &tgt);
+                        self.model.edges.push(Edge { origin: src, destination: tgt, via_point: via });
                     }
                     PlayerAction::StartGame => {
                         // Game is already started
@@ -127,6 +135,10 @@ impl<T: Ticker> MetroGame<T> {
                 }
             }
         }
+    }
+    fn get_via_point_between(&self, origin: &StationId, _destination: &StationId) -> Point {
+        let (origin_x, origin_y) = self.model.get_station(origin).map(|s| s.position).unwrap_or((0, 0));
+        (origin_x -30, origin_y -30)
     }
     fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
@@ -250,6 +262,7 @@ mod tests {
                 let expected_edge = Edge {
                     origin: src.clone(),
                     destination: tgt.clone(),
+                    via_point: (-20, -60),
                 };
                 assert_eq!(expected_edge, state.edges[0]);
             }
