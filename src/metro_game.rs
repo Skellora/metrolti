@@ -136,9 +136,18 @@ impl<T: Ticker> MetroGame<T> {
             }
         }
     }
-    fn get_via_point_between(&self, origin: &StationId, _destination: &StationId) -> Point {
+    fn get_via_point_between(&self, origin: &StationId, destination: &StationId) -> Point {
         let (origin_x, origin_y) = self.model.get_station(origin).map(|s| s.position).unwrap_or((0, 0));
-        (origin_x -30, origin_y -30)
+        let (dest_x, dest_y) = self.model.get_station(destination).map(|s| s.position).unwrap_or((0, 0));
+        let dx = dest_x - origin_x;
+        let dy = dest_y - origin_y;
+        let diag;
+        if dx.abs() < dy.abs() {
+            diag = (dx, dx * dy.signum());
+        } else {
+            diag = (dy * dx.signum(), dy);
+        }
+        (origin_x + diag.0, origin_y + diag.1)
     }
     fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
@@ -262,7 +271,7 @@ mod tests {
                 let expected_edge = Edge {
                     origin: src.clone(),
                     destination: tgt.clone(),
-                    via_point: (-20, -60),
+                    via_point: (-45, 25),
                 };
                 assert_eq!(expected_edge, state.edges[0]);
             }
