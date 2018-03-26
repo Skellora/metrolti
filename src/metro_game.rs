@@ -36,7 +36,7 @@ pub enum StationType {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct StationId(pub usize);
 
-pub type Point = (i8, i8);
+pub type Point = (i32, i32);
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Station {
