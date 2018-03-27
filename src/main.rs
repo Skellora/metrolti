@@ -45,6 +45,7 @@ fn demo_player(addr: &str) {
         DemoAction::Act(game::PlayerAction::StartGame),
         DemoAction::WaitTime(2),
         DemoAction::Act(game::PlayerAction::ConnectStations(game::StationId(0), game::StationId(1))),
+        DemoAction::Act(game::PlayerAction::ConnectStations(game::StationId(0), game::StationId(2))),
     ];
     let mut actions = actions_list.iter();
     let mut curr = actions.next();

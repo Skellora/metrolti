@@ -143,9 +143,9 @@ impl<T: Ticker> MetroGame<T> {
         let dy = dest_y - origin_y;
         let diag;
         if dx.abs() < dy.abs() {
-            diag = (dx, dx * dy.signum());
+            diag = (dx, dx.abs() * dy.signum());
         } else {
-            diag = (dy * dx.signum(), dy);
+            diag = (dy.abs() * dx.signum(), dy);
         }
         (origin_x + diag.0, origin_y + diag.1)
     }
@@ -164,7 +164,7 @@ impl<T: Ticker> MetroGame<T> {
                         self.model = MetroModel::new();
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
                         self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
-                        self.model.stations.push(Station { t: StationType::Triangle, position: (30, 30) });
+                        self.model.stations.push(Station { t: StationType::Triangle, position: (300, 30) });
                     }
                     _ => {
                         // It's unlikelu that there will be any more events that
