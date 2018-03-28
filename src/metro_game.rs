@@ -51,10 +51,31 @@ pub struct Edge {
     via_point: Point,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct LineId(pub usize);
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub struct Line {
+    colour: (u8, u8, u8),
+    edges: Vec<Edge>,
+    owning_player: PlayerId,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct TrainId(pub usize);
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub struct Train {
+    on_line: LineId,
+    positin: Point,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct MetroModel {
     stations: Vec<Station>,
     edges: Vec<Edge>,
+    lines: Vec<Line>,
+    trains: Vec<Train>,
     station_size: u8,
 }
 
@@ -64,6 +85,8 @@ impl MetroModel {
             stations: Vec::new(),
             edges: Vec::new(),
             station_size: 20u8,
+            lines: Vec::new(),
+            trains: Vec::new(),
         }
     }
     pub fn get_station(&self, id: &StationId) -> Option<&Station> {

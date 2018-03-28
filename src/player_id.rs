@@ -1,5 +1,5 @@
 
-#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PlayerId(u16);
 
 impl PlayerId {
