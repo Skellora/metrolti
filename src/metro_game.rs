@@ -73,7 +73,6 @@ pub struct Train {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct MetroModel {
     stations: Vec<Station>,
-    edges: Vec<Edge>,
     lines: Vec<Line>,
     trains: Vec<Train>,
     station_size: u8,
@@ -83,7 +82,6 @@ impl MetroModel {
     pub fn new() -> Self {
         Self {
             stations: Vec::new(),
-            edges: Vec::new(),
             station_size: 20u8,
             lines: Vec::new(),
             trains: Vec::new(),
@@ -146,11 +144,14 @@ impl<T: Ticker> MetroGame<T> {
             InputEvent::Disconnection(p_id) => {
                 self.player_out.remove(&p_id);
             }
-            InputEvent::PlayerAction(_p_id, action) => { 
+            InputEvent::PlayerAction(p_id, action) => { 
                 match action {
                     PlayerAction::ConnectStations(src, tgt) => {
                         let via = self.get_via_point_between(&src, &tgt);
-                        self.model.edges.push(Edge { origin: src, destination: tgt, via_point: via });
+                        for line in self.model.lines.iter_mut() {
+                            if line.owning_player != p_id { continue; }
+                            line.edges.push(Edge { origin: src.clone(), destination: tgt.clone(), via_point: via.clone() });
+                        }
                     }
                     PlayerAction::StartGame => {
                         // Game is already started
@@ -172,6 +173,11 @@ impl<T: Ticker> MetroGame<T> {
         }
         (origin_x + diag.0, origin_y + diag.1)
     }
+
+    fn get_player_ids(&self) -> Vec<PlayerId> {
+        self.player_out.keys().cloned().collect()
+    }
+    
     fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
             InputEvent::Connection(p_id, p) => {
@@ -188,6 +194,9 @@ impl<T: Ticker> MetroGame<T> {
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
                         self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
                         self.model.stations.push(Station { t: StationType::Triangle, position: (300, 30) });
+                        for player in self.get_player_ids() {
+                            self.model.lines.push(Line { edges: Vec::new(), colour: (1, 0, 0), owning_player: player });
+                        }
                     }
                     _ => {
                         // It's unlikelu that there will be any more events that
@@ -281,7 +290,9 @@ mod tests {
         match *update {
             StateUpdate::GameState(ref state) => {
                 assert_eq!(3, state.stations.len());
-                assert_eq!(0, state.edges.len());
+                for line in state.lines.iter() {
+                    assert_eq!(0, line.edges.len());
+                }
             }
             _ => {
                 panic!("{:?} is not a GameState", update);
@@ -291,12 +302,15 @@ mod tests {
     fn assert_has_edge(update: &StateUpdate, src: &StationId, tgt: &StationId) {
         match *update {
             StateUpdate::GameState(ref state) => {
-                let expected_edge = Edge {
-                    origin: src.clone(),
-                    destination: tgt.clone(),
-                    via_point: (-45, 25),
-                };
-                assert_eq!(expected_edge, state.edges[0]);
+                for line in state.lines.iter() {
+                    for edge in line.edges.iter() {
+                        if edge.origin == *src && edge.destination == *tgt {
+                            assert_eq!((-45, 25), edge.via_point);
+                            return;
+                        }
+                    }
+                }
+                panic!("State did not contain edge");
             }
             _ => {
                 panic!("{:?} is not a GameState", update);
