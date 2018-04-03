@@ -67,7 +67,9 @@ pub struct TrainId(pub usize);
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct Train {
     on_line: LineId,
-    positin: Point,
+    position: Point,
+    forward: bool,
+    between_stations: (StationId, StationId),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
@@ -90,6 +92,23 @@ impl MetroModel {
     pub fn get_station(&self, id: &StationId) -> Option<&Station> {
         let &StationId(index) = id;
         self.stations.get(index)
+    }
+
+    pub fn add_train_to_line(&mut self, id: &LineId) {
+        let &LineId(index) = id;
+        let line = self.lines.get(index);
+        let station_pair = if let Some(line) = line {
+            (line.edges[0].origin.clone(), line.edges[1].destination.clone())
+        } else {
+            return
+        };
+        let train = Train {
+            on_line: id.clone(),
+            position: (0,0),
+            forward: true,
+            between_stations: station_pair,
+        };
+        self.trains.push(train);
     }
 }
 
