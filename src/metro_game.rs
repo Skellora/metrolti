@@ -96,6 +96,10 @@ impl MetroModel {
         self.stations.get(index)
     }
 
+    pub fn get_station_pos(&self, id: &StationId) -> Option<Point> {
+        self.get_station(id).map(|s| s.position)
+    }
+
     pub fn add_train_to_line(&mut self, id: &LineId) {
         let &LineId(index) = id;
         let line = self.lines.get(index);
@@ -106,7 +110,7 @@ impl MetroModel {
         };
         let train = Train {
             on_line: id.clone(),
-            position: (0,0),
+            position: self.get_station_pos(&station_pair.0).unwrap_or((0,0)),
             forward: true,
             between_stations: station_pair,
         };
