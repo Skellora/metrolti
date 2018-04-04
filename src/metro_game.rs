@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 
+use rand::{Rng, thread_rng};
+
 use events::{ InputEvent };
 use game::Game;
 use player_id::*;
@@ -13,7 +15,7 @@ pub enum PlayerAction {
     ConnectStations(StationId, StationId),
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum StateUpdate {
     LobbyCount(u8),
     GameState(MetroModel),
@@ -54,9 +56,9 @@ pub struct Edge {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct LineId(pub usize);
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Line {
-    colour: (u8, u8, u8),
+    colour: (f64, f64, f64),
     edges: Vec<Edge>,
     owning_player: PlayerId,
 }
@@ -72,7 +74,7 @@ pub struct Train {
     between_stations: (StationId, StationId),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct MetroModel {
     stations: Vec<Station>,
     lines: Vec<Line>,
@@ -213,8 +215,9 @@ impl<T: Ticker> MetroGame<T> {
                         self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
                         self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
                         self.model.stations.push(Station { t: StationType::Triangle, position: (300, 30) });
+                        let mut rng = thread_rng();
                         for player in self.get_player_ids() {
-                            self.model.lines.push(Line { edges: Vec::new(), colour: (1, 0, 0), owning_player: player });
+                            self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
                         }
                     }
                     _ => {

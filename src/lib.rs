@@ -8,6 +8,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate rand;
 
 pub mod game;
 pub mod metro_game;
