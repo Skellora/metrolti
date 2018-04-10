@@ -70,6 +70,7 @@ pub struct TrainId(pub usize);
 pub struct Train {
     on_line: LineId,
     position: Point,
+    heading: Point,
     forward: bool,
     between_stations: (StationId, StationId),
 }
@@ -103,18 +104,27 @@ impl MetroModel {
     pub fn add_train_to_line(&mut self, id: &LineId) {
         let &LineId(index) = id;
         let line = self.lines.get(index);
-        let station_pair = if let Some(line) = line {
-            (line.edges[0].origin.clone(), line.edges[1].destination.clone())
+        let (station_pair, via) = if let Some(line) = line {
+            ((line.edges[0].origin.clone(), line.edges[0].destination.clone()), line.edges[0].via_point)
         } else {
             return
         };
         let train = Train {
             on_line: id.clone(),
             position: self.get_station_pos(&station_pair.0).unwrap_or((0,0)),
+            heading: via,
             forward: true,
             between_stations: station_pair,
         };
         self.trains.push(train);
+    }
+
+    pub fn add_edge_to_line(&mut self, id: &LineId, edge: Edge) {
+        let &LineId(index) = id;
+        let line = self.lines.get_mut(index);
+        if let Some(line) = line {
+            line.edges.push(edge);
+        }
     }
 }
 
@@ -173,10 +183,13 @@ impl<T: Ticker> MetroGame<T> {
                 match action {
                     PlayerAction::ConnectStations(src, tgt) => {
                         let via = self.get_via_point_between(&src, &tgt);
-                        for line in self.model.lines.iter_mut() {
+                        let mut line_id = LineId(0);
+                        for (index, line) in self.model.lines.iter().enumerate() {
                             if line.owning_player != p_id { continue; }
-                            line.edges.push(Edge { origin: src.clone(), destination: tgt.clone(), via_point: via.clone() });
+                            line_id = LineId(index);
                         }
+                        self.model.add_edge_to_line(&line_id, Edge { origin: src.clone(), destination: tgt.clone(), via_point: via.clone() });
+                        self.model.add_train_to_line(&line_id);
                     }
                     PlayerAction::StartGame => {
                         // Game is already started
