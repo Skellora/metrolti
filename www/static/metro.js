@@ -18,10 +18,16 @@ void main() {
 `;
 
 let glShapes = (function() {
-  let drawShape = function(gl, program, shape, pos, colour, size) {
+  let drawShape = function(gl, program, shape, pos, colour, sizeX, sizeY, rotation) {
     program.setUniformVec4('colour', colour[0], colour[1], colour[2], 1.0);
-    let scale = Matrix.Diagonal([size, size, 0, 1]);
-    let m = Matrix.Translation($V([pos[0], pos[1], 0])).x(scale);
+    let scale = Matrix.Diagonal([sizeX, sizeY, 0, 1]);
+    let m = scale;
+
+    let r = Matrix.RotationZ(rotation).ensure4x4();
+    m = r.x(m);
+
+    let translate = Matrix.Translation($V([pos[0], pos[1], 0]));
+    m = translate.x(m);
     program.setUniformMat4('model', m);
     gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
     SetUpAttributes(gl, program, [['aPos', 2]], 4);
@@ -92,17 +98,7 @@ let glShapes = (function() {
     let angle = Math.atan(dY / dX);
     let distance = Math.sqrt((dY * dY) + (dX * dX));
 
-    program.setUniformVec4('colour', colour[0], colour[1], colour[2], 1.0);
-    let scale = Matrix.Diagonal([distance, thickness, 1, 1]);
-    let position = Matrix.Translation($V([midX, midY, 0]));
-    let rotation = Matrix.RotationZ(angle).ensure4x4();
-    let m = position.x(rotation.x(scale));
-    program.setUniformMat4('model', m);
-
-    let shape = square(gl);
-    gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
-    SetUpAttributes(gl, program, [['aPos', 2]], 4);
-    gl.drawArrays(gl.TRIANGLES, 0, shape.count);
+    drawShape(gl, program, square(gl), [midX, midY], colour, distance, thickness, angle);
   };
 
   return {
@@ -160,8 +156,8 @@ let metro = (function() {
         if (i === touched_station) {
           colour = [1, 0, 0];
         }
-        glShapes.drawShape(gl, program, shape, station_pos, colour, station_size);
-        glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size);
+        glShapes.drawShape(gl, program, shape, station_pos, colour, station_size, station_size, 0);
+        glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size, station_size - station_border_size, 0);
       }
     }
   }
@@ -186,6 +182,22 @@ let metro = (function() {
     }
   }
 
+  function draw_trains() {
+    let trainLength = game_model.state.station_size + 5;
+    let trainWidth = game_model.state.station_size;
+    for (let i = 0; i < game_model.state.trains.length; i++) {
+      let train = game_model.state.trains[i];
+      let trainX = train.position[0];
+      let trainY = train.position[1];
+      let headingX = train.heading[0];
+      let headingY = train.heading[1];
+      let travelX = headingX - trainX;
+      let travelY = headingY - trainY;
+      let travelAngle = Math.atan(travelY / travelX);
+      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, [1, 0, 1], trainWidth, trainLength, travelAngle);
+    }
+  }
+
   function draw_state() {
     gl.clearColor(0.945, 0.941, 0.922, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -193,6 +205,7 @@ let metro = (function() {
     let ortho = getProjectionMatrix();
     program.setUniformMat4('projection', ortho);
     draw_lines();
+    draw_trains();
     draw_stations();
   }
 
