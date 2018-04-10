@@ -38,15 +38,15 @@ pub enum StationType {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct StationId(pub usize);
 
-pub type Point = (i32, i32);
+pub type Point = (f32, f32);
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Station {
     t: StationType,
     position: Point,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Edge {
     origin: StationId,
     destination: StationId,
@@ -66,13 +66,14 @@ pub struct Line {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct TrainId(pub usize);
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Train {
     on_line: LineId,
     position: Point,
     heading: Point,
     forward: bool,
     between_stations: (StationId, StationId),
+    speed: f32,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]
@@ -111,10 +112,11 @@ impl MetroModel {
         };
         let train = Train {
             on_line: id.clone(),
-            position: self.get_station_pos(&station_pair.0).unwrap_or((0,0)),
+            position: self.get_station_pos(&station_pair.0).unwrap_or((0f32,0f32)),
             heading: via,
             forward: true,
             between_stations: station_pair,
+            speed: 0.1,
         };
         self.trains.push(train);
     }
@@ -124,6 +126,19 @@ impl MetroModel {
         let line = self.lines.get_mut(index);
         if let Some(line) = line {
             line.edges.push(edge);
+        }
+    }
+
+    fn update_train(train : &mut Train) {
+        let dx = train.heading.0 - train.position.0;
+        let dy = train.heading.1 - train.position.1;
+        train.position.0 += dx.signum() * train.speed;
+        train.position.1 += dy.signum() * train.speed;
+    }
+
+    pub fn update(&mut self) {
+        for t in self.trains.iter_mut() {
+            Self::update_train(t);
         }
     }
 }
@@ -199,8 +214,8 @@ impl<T: Ticker> MetroGame<T> {
         }
     }
     fn get_via_point_between(&self, origin: &StationId, destination: &StationId) -> Point {
-        let (origin_x, origin_y) = self.model.get_station(origin).map(|s| s.position).unwrap_or((0, 0));
-        let (dest_x, dest_y) = self.model.get_station(destination).map(|s| s.position).unwrap_or((0, 0));
+        let (origin_x, origin_y) = self.model.get_station(origin).map(|s| s.position).unwrap_or((0f32, 0f32));
+        let (dest_x, dest_y) = self.model.get_station(destination).map(|s| s.position).unwrap_or_default();
         let dx = dest_x - origin_x;
         let dy = dest_y - origin_y;
         let diag;
@@ -229,9 +244,9 @@ impl<T: Ticker> MetroGame<T> {
                     PlayerAction::StartGame => { 
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
-                        self.model.stations.push(Station { t: StationType::Circle, position: (10, -30) });
-                        self.model.stations.push(Station { t: StationType::Square, position: (-50, 25) });
-                        self.model.stations.push(Station { t: StationType::Triangle, position: (300, 30) });
+                        self.model.stations.push(Station { t: StationType::Circle, position: (10., -30.) });
+                        self.model.stations.push(Station { t: StationType::Square, position: (-65., 30.) });
+                        self.model.stations.push(Station { t: StationType::Triangle, position: (300., 30.) });
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
                             self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
@@ -245,7 +260,9 @@ impl<T: Ticker> MetroGame<T> {
             }
         }
     }
-    pub fn update(&mut self) {}
+    pub fn update(&mut self) {
+        self.model.update();
+    }
     pub fn output(&mut self) {
         match self.state {
             MGameState::Lobby => self.lobby_output(),

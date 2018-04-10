@@ -194,7 +194,7 @@ let metro = (function() {
       let travelX = headingX - trainX;
       let travelY = headingY - trainY;
       let travelAngle = Math.atan(travelY / travelX);
-      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, [1, 0, 1], trainWidth, trainLength, travelAngle);
+      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, [1, 0, 1], trainLength, trainWidth, travelAngle);
     }
   }
 
