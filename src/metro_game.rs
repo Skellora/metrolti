@@ -245,7 +245,7 @@ impl<T: Ticker> MetroGame<T> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station { t: StationType::Circle, position: (10., -30.) });
-                        self.model.stations.push(Station { t: StationType::Square, position: (-65., 30.) });
+                        self.model.stations.push(Station { t: StationType::Square, position: (-45., 70.) });
                         self.model.stations.push(Station { t: StationType::Triangle, position: (300., 30.) });
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
@@ -361,7 +361,7 @@ mod tests {
                 for line in state.lines.iter() {
                     for edge in line.edges.iter() {
                         if edge.origin == *src && edge.destination == *tgt {
-                            assert_eq!((-45, 25), edge.via_point);
+                            assert_eq!((-45., 25.), edge.via_point);
                             return;
                         }
                     }
