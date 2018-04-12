@@ -83,6 +83,19 @@ impl Line {
         }
         GetEdgeResult::LocNotFound
     }
+    fn get_edge_before_station(&self, id: &StationId) -> GetEdgeResult {
+        for e in self.edges.iter() {
+            if e.destination == *id {
+                return GetEdgeResult::Edge(e);
+            }
+        }
+        if let Some(first_edge) = self.edges.first() {
+            if first_edge.origin == *id {
+                return GetEdgeResult::EndOfTheLine;
+            }
+        }
+        GetEdgeResult::LocNotFound
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -98,6 +111,7 @@ pub struct Train {
     speed: f32,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 enum TrainNextTarget {
     Heading(Point),
     Reverse(Point),
@@ -159,7 +173,7 @@ impl MetroModel {
             heading: via,
             forward: true,
             between_stations: station_pair,
-            speed: 0.2,
+            speed: 0.5,
         };
         self.trains.push(train);
     }
@@ -177,37 +191,44 @@ impl MetroModel {
             Some(t) => t,
             None => return,
         };
-        let point_proximity = 0.2;
+        let point_proximity = train.speed;
         let dx = train.heading.0 - train.position.0;
         let dy = train.heading.1 - train.position.1;
         let sqr_dist = dx * dx + dy * dy;
         let dist = sqr_dist.sqrt();
         if dist > point_proximity {
-            println!("Dist: {}", dist);
-            train.position.0 += dx.signum() * train.speed;
-            train.position.1 += dy.signum() * train.speed;
+            // They go faster diagonally...?
+            if dx != 0. {
+                train.position.0 += dx.signum() * train.speed;                
+            }
+            if dy != 0. {
+                train.position.1 += dy.signum() * train.speed;
+            }
         } else if dist > 0. {
             train.position = train.heading.clone();
-            println!("Stopped at {:?}", train.position);
         } 
     }
 
     fn train_reached_destination(&self, id: &TrainId) -> bool {
         match self.get_train(id) {
-            Some(t) => t.position.0 == t.heading.0 && t.position.1 == t.heading.1,
+            Some(t) => t.position == t.heading,
             None => false,
         }
     }
 
     fn get_train_next_destination(&self, id: &TrainId) -> TrainNextTarget {
         if let Some(t) = self.get_train(id) {
-            let target_id = &t.between_stations.1;
+            if t.position != t.heading {
+                return TrainNextTarget::Heading(t.heading);
+            }
+            let target_id = if t.forward { &t.between_stations.1 } else { &t.between_stations.0 };
             if let Some(target_pos) = self.get_station_pos(target_id) {
-                if t.heading.0 != target_pos.0 || t.heading.1 != target_pos.1 {
+                if t.heading != target_pos {
                     return TrainNextTarget::Heading(target_pos);
                 }
                 if let Some(line) = self.get_line(&t.on_line) {
-                    match line.get_edge_after_station(target_id) {
+                    let next_line = if t.forward { line.get_edge_after_station(target_id) } else { line.get_edge_before_station(target_id) };
+                    match next_line {
                         GetEdgeResult::Edge(e) =>
                             return TrainNextTarget::Edge(e.origin.clone(), e.via_point, e.destination.clone()),
                         GetEdgeResult::LocNotFound =>
@@ -227,6 +248,7 @@ impl MetroModel {
             return;
         }
         let next_dest = self.get_train_next_destination(id);
+        println!("Next: {:?}", next_dest);
         if let Some(t) = self.get_train_mut(id) {
             match next_dest {
                 TrainNextTarget::Heading(p) => {
@@ -240,7 +262,9 @@ impl MetroModel {
                     t.heading = p;
                     t.between_stations = (origin, dest);
                 }
-                TrainNextTarget::None => {},
+                TrainNextTarget::None => {
+                    panic!("Panic!");
+                },
             }
         }
     }
@@ -493,11 +517,164 @@ mod tests {
         tick(&ticks);
         assert_is_game_start(&pr1.recv().unwrap());
         assert_is_game_start(&pr2.recv().unwrap());
-        let attemptSrc = StationId(0);
-        let attemptTgt = StationId(1);
-        send_player_action(&gs, 1, PlayerAction::ConnectStations(attemptSrc.clone(), attemptTgt.clone()));
+        let attempt_src = StationId(0);
+        let attempt_tgt = StationId(1);
+        send_player_action(&gs, 1, PlayerAction::ConnectStations(attempt_src.clone(), attempt_tgt.clone()));
         tick(&ticks);
-        assert_has_edge(&pr1.recv().unwrap(), &attemptSrc, &attemptTgt);
-        assert_has_edge(&pr2.recv().unwrap(), &attemptSrc, &attemptTgt);
+        assert_has_edge(&pr1.recv().unwrap(), &attempt_src, &attempt_tgt);
+        assert_has_edge(&pr2.recv().unwrap(), &attempt_src, &attempt_tgt);
+    }
+
+    #[test]
+    fn train_dest_choice_along_single_edge() {
+        let player = PlayerId::new(0);
+        let mut m = MetroModel::new();
+
+        let test_origin = Station {
+            t: StationType::Circle,
+            position: (0., 0.),
+        };
+        let test_dest = Station {
+            t: StationType::Circle,
+            position: (10., 20.),
+        };
+
+        let test_edge = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (10., 10.),
+        };
+
+        m.stations.push(test_origin);
+        m.stations.push(test_dest);
+        m.lines.push(Line { edges: vec![ test_edge ], colour: (0., 0., 0.), owning_player: player });
+        m.trains.push(Train{
+            on_line: LineId(0),
+            position: (0., 0.),
+            heading: (10., 10.),
+            forward: true,
+            between_stations: (StationId(0), StationId(1)),
+            speed: 1.,
+        });
+
+        assert_eq!(TrainNextTarget::Heading((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (5., 5.);
+        assert_eq!(TrainNextTarget::Heading((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (10., 10.);
+        assert_eq!(TrainNextTarget::Heading((10., 20.)), m.get_train_next_destination(&TrainId(0)));
+        m.trains[0].heading = (10., 20.);
+        assert_eq!(TrainNextTarget::Heading((10., 20.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (10., 15.);
+        assert_eq!(TrainNextTarget::Heading((10., 20.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (10., 20.);
+        assert_eq!(TrainNextTarget::Reverse((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+        m.trains[0].heading = (10., 10.);
+        m.trains[0].forward = false;
+        assert_eq!(TrainNextTarget::Heading((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (10., 15.);
+        assert_eq!(TrainNextTarget::Heading((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (10., 10.);
+        assert_eq!(TrainNextTarget::Heading((0., 0.)), m.get_train_next_destination(&TrainId(0)));
+        m.trains[0].heading = (0., 0.);
+        assert_eq!(TrainNextTarget::Heading((0., 0.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (5., 5.);
+        assert_eq!(TrainNextTarget::Heading((0., 0.)), m.get_train_next_destination(&TrainId(0)));
+
+        m.trains[0].position = (0., 0.);
+        assert_eq!(TrainNextTarget::Reverse((10., 10.)), m.get_train_next_destination(&TrainId(0)));
+    }
+
+    #[test]
+    fn train_updating() {
+        let player = PlayerId::new(0);
+        let mut m = MetroModel::new();
+
+        let test_origin = Station {
+            t: StationType::Circle,
+            position: (0., 0.),
+        };
+        let test_dest = Station {
+            t: StationType::Circle,
+            position: (10., 20.),
+        };
+
+        let test_edge = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (10., 10.),
+        };
+
+        m.stations.push(test_origin);
+        m.stations.push(test_dest);
+        m.lines.push(Line { edges: vec![ test_edge ], colour: (0., 0., 0.), owning_player: player });
+        m.trains.push(Train{
+            on_line: LineId(0),
+            position: (0., 0.),
+            heading: (10., 10.),
+            forward: true,
+            between_stations: (StationId(0), StationId(1)),
+            speed: 5.,
+        });
+
+        // Just assert I'm not crazy
+        assert_eq!((0., 0.), m.trains[0].position);
+        assert_eq!((10., 10.), m.trains[0].heading);
+        assert_eq!(true, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((5., 5.), m.trains[0].position);
+        assert_eq!((10., 10.), m.trains[0].heading);
+        assert_eq!(true, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((10., 10.), m.trains[0].position);
+        assert_eq!((10., 20.), m.trains[0].heading);
+        assert_eq!(true, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((10., 15.), m.trains[0].position);
+        assert_eq!((10., 20.), m.trains[0].heading);
+        assert_eq!(true, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((10., 20.), m.trains[0].position);
+        assert_eq!((10., 10.), m.trains[0].heading);
+        assert_eq!(false, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((10., 15.), m.trains[0].position);
+        assert_eq!((10., 10.), m.trains[0].heading);
+        assert_eq!(false, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((10., 10.), m.trains[0].position);
+        assert_eq!((0., 0.), m.trains[0].heading);
+        assert_eq!(false, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((5., 5.), m.trains[0].position);
+        assert_eq!((0., 0.), m.trains[0].heading);
+        assert_eq!(false, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
+
+        m.update_train(&TrainId(0));
+        assert_eq!((0., 0.), m.trains[0].position);
+        assert_eq!((10., 10.), m.trains[0].heading);
+        assert_eq!(true, m.trains[0].forward);
+        assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
     }
 }
