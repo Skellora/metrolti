@@ -98,6 +98,15 @@ impl MetroModel {
         self.stations.get(index)
     }
 
+    pub fn get_train(&self, id: &TrainId) -> Option<&Train> {
+        let &TrainId(index) = id;
+        self.trains.get(index)
+    }
+    pub fn get_train_mut(&mut self, id: &TrainId) -> Option<&mut Train> {
+        let &TrainId(index) = id;
+        self.trains.get_mut(index)
+    }
+
     pub fn get_station_pos(&self, id: &StationId) -> Option<Point> {
         self.get_station(id).map(|s| s.position)
     }
@@ -116,7 +125,7 @@ impl MetroModel {
             heading: via,
             forward: true,
             between_stations: station_pair,
-            speed: 0.1,
+            speed: 0.2,
         };
         self.trains.push(train);
     }
@@ -129,16 +138,58 @@ impl MetroModel {
         }
     }
 
-    fn update_train(train : &mut Train) {
+    fn step_train(&mut self, id: &TrainId) {
+        let train = match self.get_train_mut(id) {
+            Some(t) => t,
+            None => return,
+        };
+        let point_proximity = 0.1;
         let dx = train.heading.0 - train.position.0;
         let dy = train.heading.1 - train.position.1;
-        train.position.0 += dx.signum() * train.speed;
-        train.position.1 += dy.signum() * train.speed;
+        let sqr_dist = dx * dx + dy * dy;
+        let dist = sqr_dist.sqrt();
+        if dist > point_proximity {
+            println!("Dist: {}", dist);
+            train.position.0 += dx.signum() * train.speed;
+            train.position.1 += dy.signum() * train.speed;
+        } else if dist > 0. {
+            train.position = train.heading.clone();
+            println!("Stopped at {:?}", train.position);
+        } 
+    }
+
+    fn train_reached_destination(&self, id: &TrainId) -> bool {
+        match self.get_train(id) {
+            Some(t) => t.position.0 == t.heading.0 && t.position.1 == t.heading.1,
+            None => false,
+        }
+    }
+
+    fn get_train_next_destination(&self, id: &TrainId) -> Option<Point> {
+        self.get_train(id)
+            .and_then(|t| self.get_station_pos(&t.between_stations.1))
+    }
+
+    fn set_train_heading(&mut self, id: &TrainId, heading: Point) {
+         if let Some(t) = self.get_train_mut(id) {
+             t.heading = heading;
+        }
+    }
+
+    fn update_train(&mut self, id : &TrainId) {
+        self.step_train(id);
+        if !self.train_reached_destination(id) {
+            return;
+        }
+        if let Some(d) = self.get_train_next_destination(id) {
+            self.set_train_heading(id, d);
+        }
     }
 
     pub fn update(&mut self) {
-        for t in self.trains.iter_mut() {
-            Self::update_train(t);
+        for i in 0..self.trains.len() {
+            let id = TrainId(i);
+            self.update_train(&id);
         }
     }
 }
