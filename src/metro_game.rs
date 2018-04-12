@@ -63,6 +63,28 @@ pub struct Line {
     owning_player: PlayerId,
 }
 
+enum GetEdgeResult<'a> {
+    Edge(&'a Edge),
+    LocNotFound,
+    EndOfTheLine,
+}
+
+impl Line {
+    fn get_edge_after_station(&self, id: &StationId) -> GetEdgeResult {
+        for e in self.edges.iter() {
+            if e.origin == *id {
+                return GetEdgeResult::Edge(e);
+            }
+        }
+        if let Some(last_edge) = self.edges.last() {
+            if last_edge.destination == *id {
+                return GetEdgeResult::EndOfTheLine;
+            }
+        }
+        GetEdgeResult::LocNotFound
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct TrainId(pub usize);
 
@@ -74,6 +96,13 @@ pub struct Train {
     forward: bool,
     between_stations: (StationId, StationId),
     speed: f32,
+}
+
+enum TrainNextTarget {
+    Heading(Point),
+    Reverse(Point),
+    Edge(StationId, Point, StationId),
+    None,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]
@@ -111,6 +140,11 @@ impl MetroModel {
         self.get_station(id).map(|s| s.position)
     }
 
+    pub fn get_line(&self, id: &LineId) -> Option<&Line> {
+        let &LineId(index) = id;
+        self.lines.get(index)
+    }
+
     pub fn add_train_to_line(&mut self, id: &LineId) {
         let &LineId(index) = id;
         let line = self.lines.get(index);
@@ -143,7 +177,7 @@ impl MetroModel {
             Some(t) => t,
             None => return,
         };
-        let point_proximity = 0.1;
+        let point_proximity = 0.2;
         let dx = train.heading.0 - train.position.0;
         let dy = train.heading.1 - train.position.1;
         let sqr_dist = dx * dx + dy * dy;
@@ -165,15 +199,26 @@ impl MetroModel {
         }
     }
 
-    fn get_train_next_destination(&self, id: &TrainId) -> Option<Point> {
-        self.get_train(id)
-            .and_then(|t| self.get_station_pos(&t.between_stations.1))
-    }
-
-    fn set_train_heading(&mut self, id: &TrainId, heading: Point) {
-         if let Some(t) = self.get_train_mut(id) {
-             t.heading = heading;
+    fn get_train_next_destination(&self, id: &TrainId) -> TrainNextTarget {
+        if let Some(t) = self.get_train(id) {
+            let target_id = &t.between_stations.1;
+            if let Some(target_pos) = self.get_station_pos(target_id) {
+                if t.heading.0 != target_pos.0 || t.heading.1 != target_pos.1 {
+                    return TrainNextTarget::Heading(target_pos);
+                }
+                if let Some(line) = self.get_line(&t.on_line) {
+                    match line.get_edge_after_station(target_id) {
+                        GetEdgeResult::Edge(e) =>
+                            return TrainNextTarget::Edge(e.origin.clone(), e.via_point, e.destination.clone()),
+                        GetEdgeResult::LocNotFound =>
+                            return TrainNextTarget::None,
+                        GetEdgeResult::EndOfTheLine =>
+                            return TrainNextTarget::Reverse(line.edges.last().unwrap().via_point),
+                    }
+                }
+            }
         }
+        TrainNextTarget::None
     }
 
     fn update_train(&mut self, id : &TrainId) {
@@ -181,8 +226,22 @@ impl MetroModel {
         if !self.train_reached_destination(id) {
             return;
         }
-        if let Some(d) = self.get_train_next_destination(id) {
-            self.set_train_heading(id, d);
+        let next_dest = self.get_train_next_destination(id);
+        if let Some(t) = self.get_train_mut(id) {
+            match next_dest {
+                TrainNextTarget::Heading(p) => {
+                    t.heading = p;
+                }
+                TrainNextTarget::Reverse(p) => {
+                    t.heading = p;
+                    t.forward = !t.forward;
+                }
+                TrainNextTarget::Edge(origin, p, dest) => {
+                    t.heading = p;
+                    t.between_stations = (origin, dest);
+                }
+                TrainNextTarget::None => {},
+            }
         }
     }
 
