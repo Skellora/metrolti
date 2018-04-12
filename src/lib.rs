@@ -9,6 +9,9 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate rand;
+#[cfg(test)] 
+#[macro_use]
+extern crate pretty_assertions;
 
 pub mod game;
 pub mod metro_game;
