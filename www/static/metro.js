@@ -183,8 +183,8 @@ let metro = (function() {
   }
 
   function draw_trains() {
-    let trainLength = game_model.state.station_size + 5;
-    let trainWidth = game_model.state.station_size;
+    let trainLength = game_model.state.station_size + 10;
+    let trainWidth = game_model.state.station_size - 5;
     for (let i = 0; i < game_model.state.trains.length; i++) {
       let train = game_model.state.trains[i];
       let trainX = train.position[0];
