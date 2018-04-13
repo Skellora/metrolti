@@ -173,7 +173,7 @@ impl MetroModel {
             heading: via,
             forward: true,
             between_stations: station_pair,
-            speed: 0.5,
+            speed: 1.,
         };
         self.trains.push(train);
     }
