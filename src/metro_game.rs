@@ -613,6 +613,19 @@ mod tests {
     }
 
     #[test]
+    fn insert_before_line() {
+        let (gs, ticks) = start_test_game();
+        let pr1 = connect_player(&gs, 1);
+        let pr2 = connect_player(&gs, 2);
+        send_player_action(&gs, 1, PlayerAction::StartGame);
+        send_player_action(&gs, 1, PlayerAction::ConnectStations(StationId(0), StationId(1)));
+        tick(&ticks);
+        send_player_action(&gs, 1, PlayerAction::InsertAtLineBeginning(LineId(0), StationId(2)));
+        assert_has_edge(&pr1.recv().unwrap(), &StationId(2), &StationId(0), None);
+        assert_has_edge(&pr2.recv().unwrap(), &StationId(2), &StationId(0), None);
+    }
+
+    #[test]
     fn train_dest_choice_along_single_edge() {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
