@@ -317,26 +317,46 @@ let metro = (function() {
     touched_station = null;
   }
 
+  function handlePointerDown(x, y) {
+    if (!game_started) {
+      sendStartGame();
+    } else {
+      handleStationDown(getStationAtScreenPoint(x, y));
+    }
+  }
+
+  function handlePointerUp(x, y) {
+    if (game_started) {
+      handleStationUp(getStationAtScreenPoint(x, y));
+    }
+  }
+
   function attachInputs() {
     window.addEventListener('touchstart', function(e) {
-      if (!game_started) {
-        sendStartGame();
-      } else {
-        let touchPoint = e.touches[0];
-        let bounding = displayElements.canvas.getBoundingClientRect();
-        let x = touchPoint.pageX - bounding.x;
-        let y = touchPoint.pageY - bounding.y;
-        handleStationDown(getStationAtScreenPoint(x, y));
-      }
+      let touchPoint = e.touches[0];
+      let bounding = displayElements.canvas.getBoundingClientRect();
+      let x = touchPoint.pageX - bounding.x;
+      let y = touchPoint.pageY - bounding.y;
+      handlePointerDown(x, y);
     });
     window.addEventListener('touchend', function(e) {
-      if (game_started) {
         let touchPoint = e.changedTouches[0];
         let bounding = displayElements.canvas.getBoundingClientRect();
         let x = touchPoint.pageX - bounding.x;
         let y = touchPoint.pageY - bounding.y;
-        handleStationUp(getStationAtScreenPoint(x, y));
-      }
+        handlePointerUp(x, y);
+    });
+    window.addEventListener('mousedown', function(e) {
+      let bounding = displayElements.canvas.getBoundingClientRect();
+      let x = e.clientX - bounding.x;
+      let y = e.clientY - bounding.y;
+      handlePointerDown(x, y);
+    });
+    window.addEventListener('mouseup', function(e) {
+        let bounding = displayElements.canvas.getBoundingClientRect();
+        let x = e.clientX - bounding.x;
+        let y = e.clientY - bounding.y;
+        handlePointerUp(x, y);
     });
   }
 
