@@ -13,6 +13,10 @@ use ticks::*;
 pub enum PlayerAction {
     StartGame,
     ConnectStations(StationId, StationId),
+    NewLine(StationId, StationId),
+    InsertAtLineBeginning(LineId, StationId),
+    InsertAtLineEnd(LineId, StationId),
+    InsertBetweenStationd(LineId, StationId, StationId, StationId),
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -159,6 +163,11 @@ impl MetroModel {
         self.lines.get(index)
     }
 
+    pub fn get_line_mut(&mut self, id: &LineId) -> Option<&mut Line> {
+        let &LineId(index) = id;
+        self.lines.get_mut(index)
+    }
+
     pub fn add_train_to_line(&mut self, id: &LineId) {
         let &LineId(index) = id;
         let line = self.lines.get(index);
@@ -275,11 +284,11 @@ impl MetroModel {
         }
     }
 
-    fn get_player_unused_line_mut(&mut self, player: &PlayerId) -> Option<&mut Line> {
-        for line in self.lines.iter_mut() {
-            if line.edges.len() > 0 { continue; }
-            if line.owning_player == *player {
-                return Some(line);
+    fn get_player_unused_line_id(&self, player: &PlayerId) -> Option<LineId> {
+        for i in 0..self.lines.len() {
+            if self.lines[i].edges.len() > 0 { continue; }
+            if self.lines[i].owning_player == *player {
+                return Some(LineId(i));
             }
         }
         None
@@ -299,11 +308,15 @@ impl MetroModel {
         (origin_x + diag.0, origin_y + diag.1)
     }
 
-    pub fn start_new_line(&mut self, player: &PlayerId, origin: &StationId, dest: &StationId) {
+    pub fn start_new_line(&mut self, player: &PlayerId, origin: &StationId, dest: &StationId) -> Option<LineId> {
         let via = self.get_via_point_between(origin, dest);
-        if let Some(line) = self.get_player_unused_line_mut(player) {
-            line.edges.push(Edge { origin: origin.clone(), destination: dest.clone(), via_point: via.clone() });
+        if let Some(line_id) = self.get_player_unused_line_id(player) {
+            if let Some(line) = self.get_line_mut(&line_id) {
+                line.edges.push(Edge { origin: origin.clone(), destination: dest.clone(), via_point: via.clone() });
+            }
+            return Some(line_id);
         }
+        None
     }
 }
 
@@ -369,6 +382,16 @@ impl<T: Ticker> MetroGame<T> {
                         }
                         self.model.add_train_to_line(&line_id);
                     }
+                    PlayerAction::NewLine(src, tgt) => {
+                        let new_id = self.model.start_new_line(&p_id, &src, &tgt);
+                        if let Some(new_id) = new_id {
+                            self.model.add_train_to_line(&new_id);
+                        }
+
+                    }
+                    PlayerAction::InsertAtLineBeginning(_, _) => {}
+                    PlayerAction::InsertAtLineEnd(_, _) => {}
+                    PlayerAction::InsertBetweenStationd(_, _, _, _) => {}
                     PlayerAction::StartGame => {
                         // Game is already started
                     }
