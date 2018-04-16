@@ -574,18 +574,20 @@ mod tests {
             }
         }
     }
-    fn assert_has_edge(update: &StateUpdate, src: &StationId, tgt: &StationId) {
+    fn assert_has_edge(update: &StateUpdate, src: &StationId, tgt: &StationId, via: Option<Point>) {
         match *update {
             StateUpdate::GameState(ref state) => {
                 for line in state.lines.iter() {
                     for edge in line.edges.iter() {
                         if edge.origin == *src && edge.destination == *tgt {
-                            assert_eq!((-45., 25.), edge.via_point);
+                            if let Some(via) = via {
+                                assert_eq!(via, edge.via_point);
+                            }
                             return;
                         }
                     }
                 }
-                panic!("State did not contain edge");
+                panic!("State did not contain edge: {:?}", state);
             }
             _ => {
                 panic!("{:?} is not a GameState", update);
@@ -606,8 +608,8 @@ mod tests {
         let attempt_tgt = StationId(1);
         send_player_action(&gs, 1, PlayerAction::ConnectStations(attempt_src.clone(), attempt_tgt.clone()));
         tick(&ticks);
-        assert_has_edge(&pr1.recv().unwrap(), &attempt_src, &attempt_tgt);
-        assert_has_edge(&pr2.recv().unwrap(), &attempt_src, &attempt_tgt);
+        assert_has_edge(&pr1.recv().unwrap(), &attempt_src, &attempt_tgt, Some((-45., 25.)));
+        assert_has_edge(&pr2.recv().unwrap(), &attempt_src, &attempt_tgt, Some((-45., 25.)));
     }
 
     #[test]
