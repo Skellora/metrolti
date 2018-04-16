@@ -16,7 +16,7 @@ pub enum PlayerAction {
     NewLine(StationId, StationId),
     InsertAtLineBeginning(LineId, StationId),
     InsertAtLineEnd(LineId, StationId),
-    InsertBetweenStationd(LineId, StationId, StationId, StationId),
+    InsertBetweenStations(LineId, StationId, StationId, StationId),
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -318,6 +318,48 @@ impl MetroModel {
         }
         None
     }
+
+    pub fn insert_before_line(&mut self, line_id: &LineId, new_station: &StationId) {
+        let line_origin_if_valid = {
+            if let Some(line) = self.get_line(&line_id) {
+                if line.edges.len() == 0 { return; }
+                if line.edges[0].origin == line.edges[line.edges.len() - 1].destination { return; }
+                for e in line.edges.iter() {
+                    if e.origin == *new_station {
+                        return;
+                    }
+                }
+                line.edges[0].origin.clone()
+            } else {
+                return;
+            }
+        };
+        let via = self.get_via_point_between(new_station, &line_origin_if_valid);
+        if let Some(line) = self.get_line_mut(&line_id) {
+            line.edges.insert(0, Edge { origin: new_station.clone(), destination: line_origin_if_valid, via_point: via.clone() });
+        }
+    }
+
+    pub fn insert_after_line(&mut self, line_id: &LineId, new_station: &StationId) {
+        let line_dest_if_valid = {
+            if let Some(line) = self.get_line(&line_id) {
+                if line.edges.len() == 0 { return; }
+                if line.edges[0].origin == line.edges[line.edges.len() - 1].destination { return; }
+                for e in line.edges.iter() {
+                    if e.destination == *new_station {
+                        return;
+                    }
+                }
+                line.edges[line.edges.len() - 1].destination.clone()
+            } else {
+                return;
+            }
+        };
+        let via = self.get_via_point_between(&line_dest_if_valid, new_station);
+        if let Some(line) = self.get_line_mut(&line_id) {
+            line.edges.push(Edge { origin: line_dest_if_valid, destination: new_station.clone(), via_point: via.clone() });
+        }
+    }
 }
 
 pub struct MetroGame<T: Ticker> {
@@ -389,9 +431,13 @@ impl<T: Ticker> MetroGame<T> {
                         }
 
                     }
-                    PlayerAction::InsertAtLineBeginning(_, _) => {}
-                    PlayerAction::InsertAtLineEnd(_, _) => {}
-                    PlayerAction::InsertBetweenStationd(_, _, _, _) => {}
+                    PlayerAction::InsertAtLineBeginning(line_id, station_id) => {
+                        self.model.insert_before_line(&line_id, &station_id);
+                    }
+                    PlayerAction::InsertAtLineEnd(line_id, station_id) => {
+                        self.model.insert_after_line(&line_id, &station_id);
+                    }
+                    PlayerAction::InsertBetweenStations(_, _, _, _) => {}
                     PlayerAction::StartGame => {
                         // Game is already started
                     }
