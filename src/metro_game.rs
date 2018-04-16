@@ -274,6 +274,37 @@ impl MetroModel {
             self.update_train(&id);
         }
     }
+
+    fn get_player_unused_line_mut(&mut self, player: &PlayerId) -> Option<&mut Line> {
+        for line in self.lines.iter_mut() {
+            if line.edges.len() > 0 { continue; }
+            if line.owning_player == *player {
+                return Some(line);
+            }
+        }
+        None
+    }
+
+    fn get_via_point_between(&self, origin: &StationId, destination: &StationId) -> Point {
+        let (origin_x, origin_y) = self.get_station(origin).map(|s| s.position).unwrap_or((0f32, 0f32));
+        let (dest_x, dest_y) = self.get_station(destination).map(|s| s.position).unwrap_or_default();
+        let dx = dest_x - origin_x;
+        let dy = dest_y - origin_y;
+        let diag;
+        if dx.abs() < dy.abs() {
+            diag = (dx, dx.abs() * dy.signum());
+        } else {
+            diag = (dy.abs() * dx.signum(), dy);
+        }
+        (origin_x + diag.0, origin_y + diag.1)
+    }
+
+    pub fn start_new_line(&mut self, player: &PlayerId, origin: &StationId, dest: &StationId) {
+        let via = self.get_via_point_between(origin, dest);
+        if let Some(line) = self.get_player_unused_line_mut(player) {
+            line.edges.push(Edge { origin: origin.clone(), destination: dest.clone(), via_point: via.clone() });
+        }
+    }
 }
 
 pub struct MetroGame<T: Ticker> {
@@ -330,13 +361,12 @@ impl<T: Ticker> MetroGame<T> {
             InputEvent::PlayerAction(p_id, action) => { 
                 match action {
                     PlayerAction::ConnectStations(src, tgt) => {
-                        let via = self.get_via_point_between(&src, &tgt);
+                        self.model.start_new_line(&p_id, &src, &tgt);
                         let mut line_id = LineId(0);
                         for (index, line) in self.model.lines.iter().enumerate() {
                             if line.owning_player != p_id { continue; }
                             line_id = LineId(index);
                         }
-                        self.model.add_edge_to_line(&line_id, Edge { origin: src.clone(), destination: tgt.clone(), via_point: via.clone() });
                         self.model.add_train_to_line(&line_id);
                     }
                     PlayerAction::StartGame => {
@@ -345,19 +375,6 @@ impl<T: Ticker> MetroGame<T> {
                 }
             }
         }
-    }
-    fn get_via_point_between(&self, origin: &StationId, destination: &StationId) -> Point {
-        let (origin_x, origin_y) = self.model.get_station(origin).map(|s| s.position).unwrap_or((0f32, 0f32));
-        let (dest_x, dest_y) = self.model.get_station(destination).map(|s| s.position).unwrap_or_default();
-        let dx = dest_x - origin_x;
-        let dy = dest_y - origin_y;
-        let diag;
-        if dx.abs() < dy.abs() {
-            diag = (dx, dx.abs() * dy.signum());
-        } else {
-            diag = (dy.abs() * dx.signum(), dy);
-        }
-        (origin_x + diag.0, origin_y + diag.1)
     }
 
     fn get_player_ids(&self) -> Vec<PlayerId> {
