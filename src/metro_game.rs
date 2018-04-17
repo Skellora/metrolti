@@ -616,13 +616,15 @@ mod tests {
     fn insert_before_line() {
         let (gs, ticks) = start_test_game();
         let pr1 = connect_player(&gs, 1);
-        let pr2 = connect_player(&gs, 2);
         send_player_action(&gs, 1, PlayerAction::StartGame);
+        tick(&ticks);
+        pr1.recv().unwrap();
         send_player_action(&gs, 1, PlayerAction::ConnectStations(StationId(0), StationId(1)));
         tick(&ticks);
+        pr1.recv().unwrap();
         send_player_action(&gs, 1, PlayerAction::InsertAtLineBeginning(LineId(0), StationId(2)));
+        tick(&ticks);
         assert_has_edge(&pr1.recv().unwrap(), &StationId(2), &StationId(0), None);
-        assert_has_edge(&pr2.recv().unwrap(), &StationId(2), &StationId(0), None);
     }
 
     #[test]
