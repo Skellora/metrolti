@@ -100,6 +100,17 @@ impl Line {
         }
         GetEdgeResult::LocNotFound
     }
+
+    fn is_valid_to_add_station(&self, station_id: &StationId) -> bool {
+        if self.edges.len() == 0 { return false; }
+        if self.edges[0].origin == self.edges[self.edges.len() - 1].destination { return false; }
+        for e in self.edges.iter() {
+            if e.origin == *station_id {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -320,20 +331,12 @@ impl MetroModel {
     }
 
     pub fn insert_before_line(&mut self, line_id: &LineId, new_station: &StationId) {
-        let line_origin_if_valid = {
+        let line_origin_if_valid =
             if let Some(line) = self.get_line(&line_id) {
-                if line.edges.len() == 0 { return; }
-                if line.edges[0].origin == line.edges[line.edges.len() - 1].destination { return; }
-                for e in line.edges.iter() {
-                    if e.origin == *new_station {
-                        return;
-                    }
-                }
-                line.edges[0].origin.clone()
-            } else {
-                return;
-            }
-        };
+                if !line.is_valid_to_add_station(new_station) {
+                    line.edges[0].origin.clone()
+                } else { return; }
+            } else { return; };
         let via = self.get_via_point_between(new_station, &line_origin_if_valid);
         if let Some(line) = self.get_line_mut(&line_id) {
             line.edges.insert(0, Edge { origin: new_station.clone(), destination: line_origin_if_valid, via_point: via.clone() });
@@ -341,20 +344,12 @@ impl MetroModel {
     }
 
     pub fn insert_after_line(&mut self, line_id: &LineId, new_station: &StationId) {
-        let line_dest_if_valid = {
+        let line_dest_if_valid =
             if let Some(line) = self.get_line(&line_id) {
-                if line.edges.len() == 0 { return; }
-                if line.edges[0].origin == line.edges[line.edges.len() - 1].destination { return; }
-                for e in line.edges.iter() {
-                    if e.destination == *new_station {
-                        return;
-                    }
-                }
-                line.edges[line.edges.len() - 1].destination.clone()
-            } else {
-                return;
-            }
-        };
+                if !line.is_valid_to_add_station(new_station) {
+                    line.edges[line.edges.len() - 1].destination.clone()
+                } else { return; }
+            } else { return; };
         let via = self.get_via_point_between(&line_dest_if_valid, new_station);
         if let Some(line) = self.get_line_mut(&line_id) {
             line.edges.push(Edge { origin: line_dest_if_valid, destination: new_station.clone(), via_point: via.clone() });
