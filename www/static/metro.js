@@ -340,11 +340,11 @@ let metro = (function() {
       handlePointerDown(x, y);
     });
     window.addEventListener('touchend', function(e) {
-        let touchPoint = e.changedTouches[0];
-        let bounding = displayElements.canvas.getBoundingClientRect();
-        let x = touchPoint.pageX - bounding.x;
-        let y = touchPoint.pageY - bounding.y;
-        handlePointerUp(x, y);
+      let touchPoint = e.changedTouches[0];
+      let bounding = displayElements.canvas.getBoundingClientRect();
+      let x = touchPoint.pageX - bounding.x;
+      let y = touchPoint.pageY - bounding.y;
+      handlePointerUp(x, y);
     });
     window.addEventListener('mousedown', function(e) {
       let bounding = displayElements.canvas.getBoundingClientRect();
@@ -353,10 +353,10 @@ let metro = (function() {
       handlePointerDown(x, y);
     });
     window.addEventListener('mouseup', function(e) {
-        let bounding = displayElements.canvas.getBoundingClientRect();
-        let x = e.clientX - bounding.x;
-        let y = e.clientY - bounding.y;
-        handlePointerUp(x, y);
+      let bounding = displayElements.canvas.getBoundingClientRect();
+      let x = e.clientX - bounding.x;
+      let y = e.clientY - bounding.y;
+      handlePointerUp(x, y);
     });
   }
 
