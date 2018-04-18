@@ -23,6 +23,7 @@ pub enum PlayerAction {
 pub enum StateUpdate {
     LobbyCount(u8),
     GameState(MetroModel),
+    You(PlayerId),
 }
 
 // This would probably be better off with state-handling trait and types
@@ -403,6 +404,7 @@ impl<T: Ticker> MetroGame<T> {
     fn handle_game_event(&mut self, ev: InputEvent) {
         match ev {
             InputEvent::Connection(p_id, p) => {
+                p.send_message(StateUpdate::You(p_id.clone()));
                 self.player_out.insert(p_id, p);
             }
             InputEvent::Disconnection(p_id) => {
@@ -448,6 +450,7 @@ impl<T: Ticker> MetroGame<T> {
     fn handle_lobby_event(&mut self, ev: InputEvent) {
         match ev {
             InputEvent::Connection(p_id, p) => {
+                p.send_message(StateUpdate::You(p_id.clone()));
                 self.player_out.insert(p_id, p);
             }
             InputEvent::Disconnection(p_id) => {
@@ -545,10 +548,12 @@ mod tests {
         let (gs, ticks) = start_test_game();
         let pr1 = connect_player(&gs, 1);
         tick(&ticks);
+        assert_eq!(Ok(StateUpdate::You(PlayerId::new(1))), pr1.recv());
         assert_eq!(Ok(StateUpdate::LobbyCount(1)), pr1.recv());
         let pr2 = connect_player(&gs, 2);
         tick(&ticks);
         assert_eq!(Ok(StateUpdate::LobbyCount(2)), pr1.recv());
+        assert_eq!(Ok(StateUpdate::You(PlayerId::new(2))), pr2.recv());
         assert_eq!(Ok(StateUpdate::LobbyCount(2)), pr2.recv());
         disconnect_player(&gs, 1);
         tick(&ticks);
@@ -597,6 +602,8 @@ mod tests {
         let pr2 = connect_player(&gs, 2);
         send_player_action(&gs, 1, PlayerAction::StartGame);
         tick(&ticks);
+        assert_eq!(Ok(StateUpdate::You(PlayerId::new(1))), pr1.recv());
+        assert_eq!(Ok(StateUpdate::You(PlayerId::new(2))), pr2.recv());
         assert_is_game_start(&pr1.recv().unwrap());
         assert_is_game_start(&pr2.recv().unwrap());
         let attempt_src = StationId(0);
@@ -613,6 +620,7 @@ mod tests {
         let pr1 = connect_player(&gs, 1);
         send_player_action(&gs, 1, PlayerAction::StartGame);
         tick(&ticks);
+        assert_eq!(Ok(StateUpdate::You(PlayerId::new(1))), pr1.recv());
         pr1.recv().unwrap();
         send_player_action(&gs, 1, PlayerAction::ConnectStations(StationId(0), StationId(1)));
         tick(&ticks);
