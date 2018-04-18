@@ -334,7 +334,7 @@ impl MetroModel {
     pub fn insert_before_line(&mut self, line_id: &LineId, new_station: &StationId) {
         let line_origin_if_valid =
             if let Some(line) = self.get_line(&line_id) {
-                if !line.is_valid_to_add_station(new_station) {
+                if line.is_valid_to_add_station(new_station) {
                     line.edges[0].origin.clone()
                 } else { return; }
             } else { return; };
@@ -347,7 +347,7 @@ impl MetroModel {
     pub fn insert_after_line(&mut self, line_id: &LineId, new_station: &StationId) {
         let line_dest_if_valid =
             if let Some(line) = self.get_line(&line_id) {
-                if !line.is_valid_to_add_station(new_station) {
+                if line.is_valid_to_add_station(new_station) {
                     line.edges[line.edges.len() - 1].destination.clone()
                 } else { return; }
             } else { return; };
