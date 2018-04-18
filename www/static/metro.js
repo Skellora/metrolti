@@ -115,6 +115,7 @@ let metro = (function() {
   let game_model = {
     lobby_count: 0,
   };
+  let this_player = null;
   let touched_station = null;
 
   let displayElements = {};
@@ -281,6 +282,9 @@ let metro = (function() {
         game_started = true;
       }
     }
+    if (message.You) {
+      this_player = message.You;
+    }
   }
 
   function setupWebSocket(address) {
@@ -299,7 +303,15 @@ let metro = (function() {
 
   function sendAddConnection(startId, endId) {
     if (startId === null || endId === null) { return; }
-    sendWebSocketMessage({ ConnectStations: [ startId, endId ] });
+    sendWebSocketMessage({ NewLine: [ startId, endId ] });
+  }
+  function sendInsertStation(lineId, stationId) {
+    if (lineId === null || stationId === null) { return; }
+    sendWebSocketMessage({ InsertAtLineBeginning: [ lineId, stationId ] });
+  }
+  function sendAppendStation(lineId, stationId) {
+    if (lineId === null || stationId === null) { return; }
+    sendWebSocketMessage({ InsertAtLineEnd: [ lineId, stationId ] });
   }
   function sendStartGame() {
     sendWebSocketMessage({ StartGame: null });
@@ -312,7 +324,22 @@ let metro = (function() {
   function handleStationUp(stationId) {
     if (touched_station === null) { return; }
     if (stationId !== touched_station) {
-      sendAddConnection(touched_station, stationId);
+      for (let i = 0; i < game_model.state.lines.length; i++) {
+        let line = game_model.state.lines[i];
+        if (line.owning_player == this_player) {
+          if (line.edges.length === 0) { continue; }
+          if (line.edges[0].origin == touched_station) {
+            sendInsertStation(i, stationId);
+            return;
+          }
+          if (line.edges[line.edges.length() - 1].destination == touched_station) {
+            sendAppendStation(i, stationId);
+            return;
+          }
+        }
+        // Server will validate this one :)
+        sendAddConnection(touched_station, stationId);
+      }
     }
     touched_station = null;
   }
