@@ -301,7 +301,7 @@ let metro = (function() {
     };
   }
 
-  function sendAddConnection(startId, endId) {
+  function sendNewLine(startId, endId) {
     if (startId === null || endId === null) { return; }
     sendWebSocketMessage({ NewLine: [ startId, endId ] });
   }
@@ -323,25 +323,30 @@ let metro = (function() {
 
   function handleStationUp(stationId) {
     if (touched_station === null) { return; }
-    if (stationId !== touched_station) {
+    let localCopy = touched_station;  // Want to use a local copy and set to null now in case of early return
+    touched_station = null;
+    if (stationId !== localCopy) {
       for (let i = 0; i < game_model.state.lines.length; i++) {
         let line = game_model.state.lines[i];
-        if (line.owning_player == this_player) {
-          if (line.edges.length === 0) { continue; }
-          if (line.edges[0].origin == touched_station) {
-            sendInsertStation(i, stationId);
-            return;
-          }
-          if (line.edges[line.edges.length() - 1].destination == touched_station) {
-            sendAppendStation(i, stationId);
-            return;
-          }
+        if (line.owning_player != this_player) { continue; }
+        if (line.edges.length === 0) { continue; }
+        if (line.edges[0].origin == localCopy) {
+          sendInsertStation(i, stationId);
+          return;
         }
-        // Server will validate this one :)
-        sendAddConnection(touched_station, stationId);
+        if (line.edges[line.edges.length - 1].destination == localCopy) {
+          sendAppendStation(i, stationId);
+          return;
+        }
+      }
+      for (let i = 0; i < game_model.state.lines.length; i++) {
+        let line = game_model.state.lines[i];
+        if (line.owning_player != this_player) { continue }
+        if (line.edges.length !== 0) { continue; }
+        sendNewLine(localCopy, stationId);
+        return;
       }
     }
-    touched_station = null;
   }
 
   function handlePointerDown(x, y) {
