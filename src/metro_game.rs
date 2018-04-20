@@ -127,6 +127,19 @@ pub struct Train {
     speed: f32,
 }
 
+impl Train {
+    pub fn new(line_id: LineId, pos: Point, via: Point, forward: bool, origin: StationId, next: StationId, speed: f32) -> Self {
+        Self {
+            on_line: line_id,
+            position: pos,
+            heading: via,
+            forward: forward,
+            between_stations: (origin, next),
+            speed: speed,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 enum TrainNextTarget {
     Heading(Point),
@@ -183,19 +196,12 @@ impl MetroModel {
     pub fn add_train_to_line(&mut self, id: &LineId) {
         let &LineId(index) = id;
         let line = self.lines.get(index);
-        let (station_pair, via) = if let Some(line) = line {
-            ((line.edges[0].origin.clone(), line.edges[0].destination.clone()), line.edges[0].via_point)
+        let (station1, station2, via) = if let Some(line) = line {
+            (line.edges[0].origin.clone(), line.edges[0].destination.clone(), line.edges[0].via_point)
         } else {
             return
         };
-        let train = Train {
-            on_line: id.clone(),
-            position: self.get_station_pos(&station_pair.0).unwrap_or((0f32,0f32)),
-            heading: via,
-            forward: true,
-            between_stations: station_pair,
-            speed: 1.,
-        };
+        let train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
         self.trains.push(train);
     }
 
@@ -653,14 +659,7 @@ mod tests {
         m.stations.push(test_origin);
         m.stations.push(test_dest);
         m.lines.push(Line { edges: vec![ test_edge ], colour: (0., 0., 0.), owning_player: player });
-        m.trains.push(Train{
-            on_line: LineId(0),
-            position: (0., 0.),
-            heading: (10., 10.),
-            forward: true,
-            between_stations: (StationId(0), StationId(1)),
-            speed: 1.,
-        });
+        m.trains.push(Train::new(LineId(0), (0., 0.), (10., 10.), true, StationId(0), StationId(1), 1.));
 
         assert_eq!(TrainNextTarget::Heading((10., 10.)), m.get_train_next_destination(&TrainId(0)));
 
@@ -719,14 +718,7 @@ mod tests {
         m.stations.push(test_origin);
         m.stations.push(test_dest);
         m.lines.push(Line { edges: vec![ test_edge ], colour: (0., 0., 0.), owning_player: player });
-        m.trains.push(Train{
-            on_line: LineId(0),
-            position: (0., 0.),
-            heading: (10., 10.),
-            forward: true,
-            between_stations: (StationId(0), StationId(1)),
-            speed: 5.,
-        });
+        m.trains.push(Train::new(LineId(0), (0., 0.), (10., 10.), true, StationId(0), StationId(1), 5.));
 
         // Just assert I'm not crazy
         assert_eq!((0., 0.), m.trains[0].position);
@@ -816,14 +808,7 @@ mod tests {
         m.stations.push(test_loc2);
         m.stations.push(test_loc3);
         m.lines.push(Line { edges: vec![ test_edge1, test_edge2 ], colour: (0., 0., 0.), owning_player: player });
-        m.trains.push(Train{
-            on_line: LineId(0),
-            position: (0., 0.),
-            heading: (10., 10.),
-            forward: true,
-            between_stations: (StationId(0), StationId(1)),
-            speed: 5.,
-        });
+        m.trains.push(Train::new(LineId(0), (0., 0.), (10., 10.), true, StationId(0), StationId(1), 5.));
 
         m.update_train(&TrainId(0));
         assert_eq!((5., 5.), m.trains[0].position);
@@ -945,14 +930,7 @@ mod tests {
         m.stations.push(test_loc2);
         m.stations.push(test_loc3);
         m.lines.push(Line { edges: vec![ test_edge1, test_edge2, test_edge3 ], colour: (0., 0., 0.), owning_player: player });
-        m.trains.push(Train{
-            on_line: LineId(0),
-            position: (0., 0.),
-            heading: (10., 10.),
-            forward: true,
-            between_stations: (StationId(0), StationId(1)),
-            speed: 10.,
-        });
+        m.trains.push(Train::new(LineId(0), (0., 0.), (10., 10.), true, StationId(0), StationId(1), 10.));
 
         // It's a loop so we should be able to do the same thing in a loop
         for _ in 0..5 {
