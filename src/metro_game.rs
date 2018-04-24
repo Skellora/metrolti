@@ -8,6 +8,7 @@ use game::Game;
 use player_id::*;
 use player::Player;
 use ticks::*;
+use randoms::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PlayerAction {
@@ -364,22 +365,24 @@ impl MetroModel {
     }
 }
 
-pub struct MetroGame<T: Ticker> {
+pub struct MetroGame<T: Ticker, R: Random> {
     state: MGameState,
     r: Receiver<InputEvent>,
     player_out: HashMap<PlayerId, Player>,
     ticker: T,
     model: MetroModel,
+    random: R
 }
 
-impl<T: Ticker> Game<T> for MetroGame<T> {
-    fn new(event_loop: Receiver<InputEvent>, ticker: T) -> Self {
+impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
+    fn new(event_loop: Receiver<InputEvent>, ticker: T, random: R) -> Self {
         MetroGame {
             state: MGameState::Lobby,
             r: event_loop,
             player_out: HashMap::new(),
             ticker: ticker,
             model: MetroModel::new(),
+            random: random,
         }
     }
     fn main(&mut self) {
@@ -393,7 +396,7 @@ impl<T: Ticker> Game<T> for MetroGame<T> {
     }
 }
 
-impl<T: Ticker> MetroGame<T> {
+impl<T: Ticker, R: Random> MetroGame<T, R> {
     pub fn input(&mut self) {
         let mut events : Vec<_> = self.r.try_iter().collect();
         for in_event in events.drain(..) {
@@ -532,8 +535,10 @@ mod tests {
         let (tsw, trw) = channel();
         let (tss, trs) = channel();
         let t = TestTicker { r: trw, s: tss };
+        let (_rand_s, rand_r) = channel();
+        let test_rand = TestRandom { r: rand_r };
         let (gs, gr) = channel();
-        let mut test_game = MetroGame::new(gr, t);
+        let mut test_game = MetroGame::new(gr, t, test_rand);
         thread::spawn(move || test_game.main());
         thread::sleep(Duration::from_millis(200));
         (gs, (tsw, trs))

@@ -6,8 +6,9 @@ use std::time::Duration;
 use game::Game;
 use player::*;
 use ticks::*;
+use randoms::*;
 
-pub fn listen<G: Game<TPSTicker>>(websocket_address: String, murder_host: String) {
+pub fn listen<G: Game<TPSTicker, RealRandom>>(websocket_address: String, murder_host: String) {
     let (connection_sender, connection_receiver) = channel();
     let (to_server_sender, to_server_receiver) = channel();
     thread::spawn(move || {
@@ -21,7 +22,8 @@ pub fn listen<G: Game<TPSTicker>>(websocket_address: String, murder_host: String
     });
     let tick_rate = Duration::from_millis(1000/30);
     let ticker = TPSTicker::new(tick_rate);
-    G::new(to_server_receiver, ticker).main();
+    let random = RealRandom;
+    G::new(to_server_receiver, ticker, random).main();
     println!("Game exiting");
 }
 
@@ -43,8 +45,8 @@ mod tests {
         r: Receiver<InputEvent>,
     }
 
-    impl<T: Ticker> Game<T> for EchoGame {
-        fn new(r: Receiver<InputEvent>, _: T) -> Self {
+    impl<T: Ticker, R: Random> Game<T, R> for EchoGame {
+        fn new(r: Receiver<InputEvent>, _: T, _: R) -> Self {
             EchoGame {
                 r: r
             }
