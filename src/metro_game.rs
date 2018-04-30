@@ -536,7 +536,7 @@ mod tests {
         sender.send(InputEvent::Disconnection(PlayerId::new(id))).expect("test pkayer disconnect");
     }
 
-    fn start_test_game() -> (Sender<InputEvent>, (Sender<u64>, Receiver<()>, Sender<f32>)) {
+    fn start_test_game() -> (Sender<InputEvent>, (Sender<f64>, Receiver<()>, Sender<f32>)) {
         let (tsw, trw) = channel();
         let (tss, trs) = channel();
         let t = TestTicker { r: trw, s: tss };
@@ -555,8 +555,8 @@ mod tests {
             .expect("Test sending player action");
     }
 
-    fn tick(&(ref tsw, ref trs, ref rngs): &(Sender<u64>, Receiver<()>, Sender<f32>)) {
-        tsw.send(1000).unwrap();
+    fn tick(&(ref tsw, ref trs, ref rngs): &(Sender<f64>, Receiver<()>, Sender<f32>)) {
+        tsw.send(1f64).unwrap();
         println!("waiting tick end");
         trs.recv().unwrap();
         println!("tick end");

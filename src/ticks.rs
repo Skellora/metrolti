@@ -4,7 +4,7 @@ use std::thread;
 
 pub trait Ticker {
     fn start(&mut self);
-    fn wait_until_next_tick(&mut self) -> Duration;
+    fn wait_until_next_tick(&mut self) -> f64;
 }
 
 pub struct TPSTicker {
@@ -26,7 +26,7 @@ impl Ticker for TPSTicker {
         self.last = Instant::now();
     }
 
-    fn wait_until_next_tick(&mut self) -> Duration {
+    fn wait_until_next_tick(&mut self) -> f64 {
         let next_tick_wait = self.tps.checked_sub(self.last.elapsed());
         if let Some(wait) = next_tick_wait {
             thread::sleep(wait);
@@ -35,20 +35,20 @@ impl Ticker for TPSTicker {
         }
         let time_waited = self.last.elapsed();
         self.last = Instant::now();
-        time_waited
+        time_waited.as_secs() as f64 + (time_waited.subsec_nanos() as f64 / 1_000_000_000_f64)
     }
 }
 
 pub struct TestTicker {
-    pub r: Receiver<u64>,
+    pub r: Receiver<f64>,
     pub s: Sender<()>,
 }
 
 impl Ticker for TestTicker {
     fn start(&mut self){}
-    fn wait_until_next_tick(&mut self) -> Duration {
+    fn wait_until_next_tick(&mut self) -> f64 {
         self.s.send(()).expect("test ticker signal");
-        let m = self.r.recv().expect("test ticker wait");
-        Duration::from_millis(m)
+        let s = self.r.recv().expect("test ticker wait");
+        s
     }
 }
