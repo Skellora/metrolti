@@ -132,6 +132,18 @@ let metro = (function() {
       , -1, 1);
   }
 
+  function stationShape(shapeName) {
+    switch (shapeName) {
+    case 'Circle':
+      return glShapes.circle(gl);
+    case 'Square':
+      return glShapes.square(gl);
+    case 'Triangle':
+      return glShapes.triangle(gl);
+    }
+    return null;
+  }
+
   function draw_stations() {
     let station_size = game_model.state.station_size;
     let station_border_size = station_size / 5;
@@ -140,18 +152,7 @@ let metro = (function() {
       let station = game_model.state.stations[i];
       let station_type = station.t;
       let station_pos = station.position;
-      let shape = null;
-      switch (station_type) {
-      case 'Circle':
-        shape = glShapes.circle(gl);
-        break;
-      case 'Square':
-        shape = glShapes.square(gl);
-        break;
-      case 'Triangle':
-        shape = glShapes.triangle(gl);
-        break;
-      }
+      let shape = stationShape(station_type);
       if (shape !== null) {
         let colour = [0, 0, 0];
         if (i === touched_station) {
@@ -186,9 +187,12 @@ let metro = (function() {
   function draw_trains() {
     let trainLength = game_model.state.station_size + 10;
     let trainWidth = game_model.state.station_size - 5;
+    let passengerSize = trainLength / 6;
     for (let i = 0; i < game_model.state.trains.length; i++) {
       let train = game_model.state.trains[i];
       let line = game_model.state.lines[train.on_line];
+      if (!line) { continue; }
+      let trainColour = line.colour;
       let trainX = train.position[0];
       let trainY = train.position[1];
       let headingX = train.heading[0];
@@ -196,7 +200,18 @@ let metro = (function() {
       let travelX = headingX - trainX;
       let travelY = headingY - trainY;
       let travelAngle = Math.atan(travelY / travelX);
-      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, line.colour, trainLength, trainWidth, travelAngle);
+      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, trainColour, trainLength, trainWidth, travelAngle);
+      for (let p = 0; p < 6; p++) {
+        let passenger = train.passengers[p];
+        if (!passenger) {
+          break;
+        }
+        let shape = stationShape(passenger);
+        if (shape !== null) {
+          glShapes.drawShape(gl, program, shape, train.position, [trainColour[0] + 0.1, trainColour[1] + 0.1, trainColour[2] + 0.1], passengerSize, passengerSize, 0);
+        }
+
+      }
     }
   }
 

@@ -126,6 +126,7 @@ pub struct Train {
     forward: bool,
     between_stations: (StationId, StationId),
     speed: f32,
+    passengers: Vec<StationType>,
 }
 
 impl Train {
@@ -137,6 +138,7 @@ impl Train {
             forward: forward,
             between_stations: (origin, next),
             speed: speed,
+            passengers: Vec::new(),
         }
     }
 }
@@ -202,7 +204,8 @@ impl MetroModel {
         } else {
             return
         };
-        let train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
+        let mut train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
+        train.passengers.push(StationType::Circle);
         self.trains.push(train);
     }
 
