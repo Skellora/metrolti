@@ -188,6 +188,7 @@ let metro = (function() {
     let trainWidth = game_model.state.station_size - 5;
     for (let i = 0; i < game_model.state.trains.length; i++) {
       let train = game_model.state.trains[i];
+      let line = game_model.state.lines[train.on_line];
       let trainX = train.position[0];
       let trainY = train.position[1];
       let headingX = train.heading[0];
@@ -195,7 +196,7 @@ let metro = (function() {
       let travelX = headingX - trainX;
       let travelY = headingY - trainY;
       let travelAngle = Math.atan(travelY / travelX);
-      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, [1, 0, 1], trainLength, trainWidth, travelAngle);
+      glShapes.drawShape(gl, program, glShapes.square(gl), train.position, line.colour, trainLength, trainWidth, travelAngle);
     }
   }
 
