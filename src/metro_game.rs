@@ -371,7 +371,12 @@ pub struct MetroGame<T: Ticker, R: Random> {
     player_out: HashMap<PlayerId, Player>,
     ticker: T,
     model: MetroModel,
-    random: R
+    random: R,
+
+    ticks_since_last_station: u64,
+    min_ticks_between_stations: u64,
+    base_station_chance: f64,
+    station_chance_per_tick: f64,
 }
 
 impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
@@ -383,6 +388,11 @@ impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
             ticker: ticker,
             model: MetroModel::new(),
             random: random,
+
+            ticks_since_last_station: 0,
+            min_ticks_between_stations: 30,
+            base_station_chance: 0.00005,
+            station_chance_per_tick: 0.000005,
         }
     }
     fn main(&mut self) {
@@ -487,11 +497,16 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
         }
     }
     pub fn update(&mut self) {
-        if self.random.gen() < 0.005 {
-            let x = self.random.gen() * 200. - 100.;
-            let y = self.random.gen() * 600. - 300.;
-            self.model.stations.push(Station { t: StationType::Triangle, position: (x, y) });
+        if let Some(spawnable_ticks) = self.ticks_since_last_station.checked_sub(self.min_ticks_between_stations) {
+            let chance = self.base_station_chance + self.station_chance_per_tick * spawnable_ticks as f64;
+            if self.random.gen() < chance {
+                let x = self.random.gen() * 200. - 100.;
+                let y = self.random.gen() * 600. - 300.;
+                self.model.stations.push(Station { t: StationType::Triangle, position: (x as f32, y as f32) });
+                self.ticks_since_last_station = 0;
+            }
         }
+        self.ticks_since_last_station += 1;
         self.model.update();
     }
     pub fn output(&mut self) {
@@ -536,7 +551,7 @@ mod tests {
         sender.send(InputEvent::Disconnection(PlayerId::new(id))).expect("test pkayer disconnect");
     }
 
-    fn start_test_game() -> (Sender<InputEvent>, (Sender<f64>, Receiver<()>, Sender<f32>)) {
+    fn start_test_game() -> (Sender<InputEvent>, (Sender<f64>, Receiver<()>, Sender<f64>)) {
         let (tsw, trw) = channel();
         let (tss, trs) = channel();
         let t = TestTicker { r: trw, s: tss };
@@ -546,7 +561,7 @@ mod tests {
         let mut test_game = MetroGame::new(gr, t, test_rand);
         thread::spawn(move || test_game.main());
         thread::sleep(Duration::from_millis(200));
-        rand_s.send(1f32).unwrap();
+        rand_s.send(1f64).unwrap();
         (gs, (tsw, trs, rand_s))
     }
 
@@ -555,12 +570,12 @@ mod tests {
             .expect("Test sending player action");
     }
 
-    fn tick(&(ref tsw, ref trs, ref rngs): &(Sender<f64>, Receiver<()>, Sender<f32>)) {
+    fn tick(&(ref tsw, ref trs, ref rngs): &(Sender<f64>, Receiver<()>, Sender<f64>)) {
         tsw.send(1f64).unwrap();
         println!("waiting tick end");
         trs.recv().unwrap();
         println!("tick end");
-        rngs.send(1f32).unwrap();
+        rngs.send(1f64).unwrap();
     }
 
     #[test]
