@@ -357,7 +357,7 @@ let metro = (function() {
       }
       for (let i = 0; i < game_model.state.lines.length; i++) {
         let line = game_model.state.lines[i];
-        if (line.owning_player != this_player) { continue }
+        if (line.owning_player != this_player) { continue; }
         if (line.edges.length !== 0) { continue; }
         sendNewLine(localCopy, stationId);
         return;
