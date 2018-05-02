@@ -163,7 +163,7 @@ impl MetroModel {
     pub fn new() -> Self {
         Self {
             stations: Vec::new(),
-            station_size: 20u8,
+            station_size: 26u8,
             lines: Vec::new(),
             trains: Vec::new(),
         }

@@ -165,7 +165,7 @@ let metro = (function() {
   }
 
   function draw_edges(edgeList, colour) {
-    let edge_thickness = 8;
+    let edge_thickness = game_model.state.station_size / 2.5;
     for (let i = 0; i < edgeList.length; i++) {
       let edge = edgeList[i];
       let srcStn = game_model.state.stations[edge.origin];
@@ -185,7 +185,7 @@ let metro = (function() {
   }
 
   function draw_trains() {
-    let passengerSize = game_model.state.station_size / 4;
+    let passengerSize = game_model.state.station_size / 2.5;
     let passengerMargin = 1;
     let trainLength = 3 * passengerSize + 4 * passengerMargin;
     let trainWidth = 2 * passengerSize + 3 * passengerMargin;
