@@ -187,7 +187,8 @@ let metro = (function() {
   function draw_trains() {
     let trainLength = game_model.state.station_size + 10;
     let trainWidth = game_model.state.station_size - 5;
-    let passengerSize = trainLength / 6;
+    let passengerSize = trainWidth / 3;
+    let passengerMargin = passengerSize / 2;
     for (let i = 0; i < game_model.state.trains.length; i++) {
       let train = game_model.state.trains[i];
       let line = game_model.state.lines[train.on_line];
@@ -206,9 +207,22 @@ let metro = (function() {
         if (!passenger) {
           break;
         }
+        let seatRow = p % 3;
+        let seatCol = p % 2;
+        let xMultiplier = passengerSize + passengerMargin;
+        let yMultiplier = (passengerSize / 2) + passengerMargin;
+        let passengerOffsetX = (seatRow - 1) * xMultiplier;
+        let passengerOffsetY = seatCol === 0 ? -yMultiplier : yMultiplier;
+        let r = Matrix.RotationZ(travelAngle).ensure4x4();
+        let translate = Matrix.Translation($V([passengerOffsetX, passengerOffsetY, 0]));
+        let passengerOffset = r.x(translate).col(4);
+        let passengerPos = [
+          train.position[0] + passengerOffset.e(1),
+          train.position[1] + passengerOffset.e(2),
+        ];
         let shape = stationShape(passenger);
         if (shape !== null) {
-          glShapes.drawShape(gl, program, shape, train.position, [trainColour[0] + 0.1, trainColour[1] + 0.1, trainColour[2] + 0.1], passengerSize, passengerSize, 0);
+          glShapes.drawShape(gl, program, shape, passengerPos, [trainColour[0] + 0.1, trainColour[1] + 0.1, trainColour[2] + 0.1], passengerSize, passengerSize, 0);
         }
 
       }
