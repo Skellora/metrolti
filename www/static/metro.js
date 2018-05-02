@@ -222,7 +222,7 @@ let metro = (function() {
         ];
         let shape = stationShape(passenger);
         if (shape !== null) {
-          glShapes.drawShape(gl, program, shape, passengerPos, [trainColour[0] + 0.1, trainColour[1] + 0.1, trainColour[2] + 0.1], passengerSize, passengerSize, 0);
+          glShapes.drawShape(gl, program, shape, passengerPos, [trainColour[0] + 0.1, trainColour[1] + 0.1, trainColour[2] + 0.1], passengerSize, passengerSize, travelAngle);
         }
 
       }
