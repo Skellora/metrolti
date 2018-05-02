@@ -205,7 +205,15 @@ impl MetroModel {
             return
         };
         let mut train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
-        train.passengers.push(StationType::Circle);
+        let mut rng = thread_rng();
+        for _ in 0..6 {
+            let st = match rng.gen_range(0, 3) {
+                0 => StationType::Triangle,
+                1 => StationType::Square,
+                _ => StationType::Circle,
+            };
+            train.passengers.push(st);
+        }
         self.trains.push(train);
     }
 
