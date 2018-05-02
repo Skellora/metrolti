@@ -185,10 +185,10 @@ let metro = (function() {
   }
 
   function draw_trains() {
-    let trainLength = game_model.state.station_size + 10;
-    let trainWidth = game_model.state.station_size - 5;
-    let passengerSize = trainWidth / 3;
-    let passengerMargin = passengerSize / 2;
+    let passengerSize = game_model.state.station_size / 4;
+    let passengerMargin = 1;
+    let trainLength = 3 * passengerSize + 4 * passengerMargin;
+    let trainWidth = 2 * passengerSize + 3 * passengerMargin;
     for (let i = 0; i < game_model.state.trains.length; i++) {
       let train = game_model.state.trains[i];
       let line = game_model.state.lines[train.on_line];
