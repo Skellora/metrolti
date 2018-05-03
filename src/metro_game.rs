@@ -141,6 +141,14 @@ impl Train {
             passengers: Vec::new(),
         }
     }
+
+    pub fn next_station(&self) -> StationId {
+        if self.forward {
+            self.between_stations.1.clone()
+        } else {
+            self.between_stations.0.clone()
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -281,10 +289,30 @@ impl MetroModel {
         TrainNextTarget::None
     }
 
+    fn alighting_passengers(&self, id: &TrainId) -> Option<Vec<StationType>> {
+        self.get_train(id)
+            .and_then(|t| {
+                self.get_station(&t.next_station())
+                    .and_then(|s| Some((t, s)))
+            })
+            .and_then(|(t, s)| {
+                if t.position != s.position {
+                    return None;
+                }
+                Some(vec![s.t.clone()])
+            })
+    }
+
     fn update_train(&mut self, id : &TrainId) {
         self.step_train(id);
         if !self.train_reached_destination(id) {
             return;
+        }
+        if let Some(alighting) = self.alighting_passengers(id) {
+            self.get_train_mut(id)
+                .map(|t: &mut Train|
+                    t.passengers.retain(|p| !alighting.contains(p))
+                );
         }
         let next_dest = self.get_train_next_destination(id);
         if let Some(t) = self.get_train_mut(id) {
