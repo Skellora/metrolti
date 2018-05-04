@@ -270,9 +270,6 @@ impl MetroModel {
 
     fn get_train_next_destination(&self, id: &TrainId) -> TrainNextTarget {
         if let Some(t) = self.get_train(id) {
-            if t.passenger_wait.is_some() {
-                return TrainNextTarget::None;
-            }
             if t.position != t.heading {
                 return TrainNextTarget::Heading(t.heading);
             }
@@ -297,10 +294,36 @@ impl MetroModel {
         TrainNextTarget::None
     }
 
+    fn get_at_station(&self, id: &TrainId) -> Option<StationId> {
+        self.get_train(id)
+            .and_then(|t| {
+                let pos = t.position;
+                let (ref s1, ref s2) = t.between_stations;
+                  self.get_station(&s1)
+                      .and_then(|s|
+                                if pos == s.position {
+                                    Some(s1.clone())
+                                } else {
+                                    None
+                                }
+                            )
+                      .or(self.get_station(&s2)
+                          .and_then(|s|
+                                if pos == s.position {
+                                    Some(s2.clone())
+                                } else {
+                                    None
+                                }
+                            )
+                          )
+            })
+    }
+
     fn alighting_passengers(&self, id: &TrainId) -> Option<Vec<StationType>> {
         self.get_train(id)
             .and_then(|t| {
-                self.get_station(&t.next_station())
+                self.get_at_station(id)
+                    .and_then(|s_id| self.get_station(&s_id))
                     .and_then(|s| Some((t, s)))
             })
             .and_then(|(t, s)| {
