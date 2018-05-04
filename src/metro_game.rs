@@ -127,6 +127,7 @@ pub struct Train {
     between_stations: (StationId, StationId),
     speed: f32,
     passengers: Vec<StationType>,
+    passenger_wait: Option<u16>,
 }
 
 impl Train {
@@ -139,6 +140,7 @@ impl Train {
             between_stations: (origin, next),
             speed: speed,
             passengers: Vec::new(),
+            passenger_wait: None,
         }
     }
 
@@ -238,6 +240,9 @@ impl MetroModel {
             Some(t) => t,
             None => return,
         };
+        if train.passenger_wait.is_some() {
+            return;
+        }
         let point_proximity = train.speed;
         let dx = train.heading.0 - train.position.0;
         let dy = train.heading.1 - train.position.1;
@@ -299,20 +304,37 @@ impl MetroModel {
                 if t.position != s.position {
                     return None;
                 }
-                Some(vec![s.t.clone()])
+                // This will check for passengers who want to get off to change too
+                let mut v = Vec::new();
+                if t.passengers.contains(&s.t) {
+                    v.push(s.t.clone())
+                }
+                Some(v)
             })
     }
 
     fn update_train(&mut self, id : &TrainId) {
         self.step_train(id);
+        if let Some(alighting) = self.alighting_passengers(id) {
+            if alighting.len() > 0 {
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| {
+                         t.passenger_wait = t.passenger_wait.or(Some(30)).and_then(|w| Some(w - 1));
+                         if t.passenger_wait == Some(0) {
+                             remove_first(&mut t.passengers, &alighting[0]);
+                             t.passenger_wait = None;
+                             for passenger_i in alighting {
+                                 if t.passengers.contains(&passenger_i) {
+                                     t.passenger_wait = Some(30);
+                                     break;
+                                 }
+                             }
+                         }
+                    });
+            }
+        }
         if !self.train_reached_destination(id) {
             return;
-        }
-        if let Some(alighting) = self.alighting_passengers(id) {
-            self.get_train_mut(id)
-                .map(|t: &mut Train|
-                    t.passengers.retain(|p| !alighting.contains(p))
-                );
         }
         let next_dest = self.get_train_next_destination(id);
         if let Some(t) = self.get_train_mut(id) {
@@ -402,6 +424,17 @@ impl MetroModel {
             line.edges.push(Edge { origin: line_dest_if_valid, destination: new_station.clone(), via_point: via.clone() });
         }
     }
+}
+
+fn remove_first<T: Eq>(v: &mut Vec<T>, t: &T) {
+    let mut delete_idx = None;
+    for i in 0..(v.len()) {
+        if v[i] == *t {
+            delete_idx = Some(i);
+            break;
+        }
+    }
+    delete_idx.map(|i| v.remove(i));
 }
 
 pub struct MetroGame<T: Ticker, R: Random> {
