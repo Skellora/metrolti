@@ -240,7 +240,7 @@ impl MetroModel {
             Some(t) => t,
             None => return,
         };
-        if train.passenger_wait.is_some() {
+        if let Some(_wait) = train.passenger_wait {
             return;
         }
         let point_proximity = train.speed;
@@ -270,6 +270,9 @@ impl MetroModel {
 
     fn get_train_next_destination(&self, id: &TrainId) -> TrainNextTarget {
         if let Some(t) = self.get_train(id) {
+            if t.passenger_wait.is_some() {
+                return TrainNextTarget::None;
+            }
             if t.position != t.heading {
                 return TrainNextTarget::Heading(t.heading);
             }
@@ -313,8 +316,7 @@ impl MetroModel {
             })
     }
 
-    fn update_train(&mut self, id : &TrainId) {
-        self.step_train(id);
+    fn handle_train_arrival(&mut self, id: &TrainId) {
         if let Some(alighting) = self.alighting_passengers(id) {
             if alighting.len() > 0 {
                 self.get_train_mut(id)
@@ -333,6 +335,9 @@ impl MetroModel {
                     });
             }
         }
+    }
+
+    fn handle_train_destination(&mut self, id: &TrainId) {
         if !self.train_reached_destination(id) {
             return;
         }
@@ -350,11 +355,15 @@ impl MetroModel {
                     t.heading = p;
                     t.between_stations = (origin, dest);
                 }
-                TrainNextTarget::None => {
-                    panic!("Panic!");
-                },
+                TrainNextTarget::None => { },
             }
         }
+    }
+
+    fn update_train(&mut self, id : &TrainId) {
+        self.step_train(id);
+        self.handle_train_arrival(id);
+        self.handle_train_destination(id);
     }
 
     pub fn update(&mut self) {

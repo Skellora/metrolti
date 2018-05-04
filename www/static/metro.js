@@ -200,6 +200,9 @@ let metro = (function() {
       let headingY = train.heading[1];
       let travelX = headingX - trainX;
       let travelY = headingY - trainY;
+      if (travelX === 0) {
+        travelX = 1;
+      }
       let travelAngle = Math.atan(travelY / travelX);
       glShapes.drawShape(gl, program, glShapes.square(gl), train.position, trainColour, trainLength, trainWidth, travelAngle);
       for (let p = 0; p < 6; p++) {
