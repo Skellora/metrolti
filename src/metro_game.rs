@@ -143,14 +143,6 @@ impl Train {
             passenger_wait: None,
         }
     }
-
-    pub fn next_station(&self) -> StationId {
-        if self.forward {
-            self.between_stations.1.clone()
-        } else {
-            self.between_stations.0.clone()
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
