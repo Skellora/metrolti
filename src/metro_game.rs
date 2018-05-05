@@ -311,7 +311,7 @@ impl MetroModel {
             })
     }
 
-    fn alighting_passengers(&self, id: &TrainId) -> Option<Vec<StationType>> {
+    fn alighting_passenger(&self, id: &TrainId) -> Option<StationType> {
         self.get_train(id)
             .and_then(|t| {
                 self.get_at_station(id)
@@ -323,32 +323,26 @@ impl MetroModel {
                     return None;
                 }
                 // This will check for passengers who want to get off to change too
-                let mut v = Vec::new();
                 if t.passengers.contains(&s.t) {
-                    v.push(s.t.clone())
+                    return Some(s.t.clone())
                 }
-                Some(v)
+                None
             })
     }
 
     fn handle_train_arrival(&mut self, id: &TrainId) {
-        if let Some(alighting) = self.alighting_passengers(id) {
-            if alighting.len() > 0 {
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| {
-                         t.passenger_wait = t.passenger_wait.or(Some(30)).and_then(|w| Some(w - 1));
-                         if t.passenger_wait == Some(0) {
-                             remove_first(&mut t.passengers, &alighting[0]);
-                             t.passenger_wait = None;
-                             for passenger_i in alighting {
-                                 if t.passengers.contains(&passenger_i) {
-                                     t.passenger_wait = Some(30);
-                                     break;
-                                 }
-                             }
-                         }
-                    });
-            }
+        if let Some(alighting) = self.alighting_passenger(id) {
+            self.get_train_mut(id)
+                .map(|t: &mut Train| {
+                    t.passenger_wait = t.passenger_wait.map(|w| w - 1).or(Some(30));
+                     if t.passenger_wait == Some(0) {
+                        remove_first(&mut t.passengers, &alighting);
+                        t.passenger_wait = Some(30);
+                     }
+                });
+        } else {
+            self.get_train_mut(id)
+                .map(|t: &mut Train| t.passenger_wait = None);
         }
     }
 
