@@ -1096,4 +1096,76 @@ mod tests {
             assert_eq!((StationId(0), StationId(1)), m.trains[0].between_stations);
         }
     }
+
+    #[test]
+    pub fn passenger_alighting() {
+        let player = PlayerId::new(0);
+        let mut m = MetroModel::new();
+
+        let test_loc1 = Station {
+            t: StationType::Circle,
+            position: (0., 0.),
+        };
+        let test_loc2 = Station {
+            t: StationType::Triangle,
+            position: (10., 20.),
+        };
+
+        let test_edge1 = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (10., 10.),
+        };
+        m.stations.push(test_loc1);
+        m.stations.push(test_loc2);
+        m.lines.push(Line { edges: vec![ test_edge1 ], colour: (0., 0., 0.), owning_player: player });
+        let mut train = Train::new(LineId(0), (0., 0.), (10., 10.), true, StationId(0), StationId(1), 10.);
+        train.passengers.push(StationType::Circle);
+        train.passengers.push(StationType::Triangle);
+        train.passengers.push(StationType::Square);
+        train.passengers.push(StationType::Circle);
+        m.trains.push(train);
+
+        m.update();
+        assert_eq!((10., 10.), m.trains[0].position);
+
+        m.update();
+        assert_eq!((10., 20.), m.trains[0].position);
+
+        // Start waiting to deposit passengers.
+
+        for _ in 0..30 {
+            assert_eq!((10., 20.), m.trains[0].position);
+            assert_eq!(vec![StationType::Circle, StationType::Triangle, StationType::Square, StationType::Circle], m.trains[0].passengers);
+            m.update();
+        }
+        assert_eq!((10., 20.), m.trains[0].position);
+        assert_eq!(vec![StationType::Circle, StationType::Square, StationType::Circle], m.trains[0].passengers);
+        // An extra tick to check no more
+        m.update();
+
+        m.update();
+        assert_eq!((10., 10.), m.trains[0].position);
+
+        m.update();
+        assert_eq!((0., 0.), m.trains[0].position);
+
+        for _ in 0..30 {
+            assert_eq!((0., 0.), m.trains[0].position);
+            assert_eq!(vec![StationType::Circle, StationType::Square, StationType::Circle], m.trains[0].passengers);
+            m.update();
+        }
+        for _ in 0..30 {
+            assert_eq!((0., 0.), m.trains[0].position);
+            assert_eq!(vec![StationType::Square, StationType::Circle], m.trains[0].passengers);
+            m.update();
+        }
+        assert_eq!((0., 0.), m.trains[0].position);
+        assert_eq!(vec![StationType::Square], m.trains[0].passengers);
+        // An extra tick to check no more
+        m.update();
+
+        m.update();
+        assert_eq!((10., 10.), m.trains[0].position);
+    }
 }
