@@ -5,6 +5,14 @@ pub trait Random {
     fn gen(&self) -> f64;
 }
 
+pub struct Always1Random;
+
+impl Random for Always1Random {
+    fn gen(&self) -> f64 {
+        1f64
+    }
+}
+
 pub struct TestRandom {
     pub r: Receiver<f64>,
 }
