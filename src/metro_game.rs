@@ -52,6 +52,15 @@ pub struct Station {
     position: Point,
 }
 
+impl Station {
+    pub fn new(t: StationType, position: Point) -> Self {
+        Self {
+            t: t,
+            position: position,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Edge {
     origin: StationId,
@@ -570,9 +579,9 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                     PlayerAction::StartGame => { 
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
-                        self.model.stations.push(Station { t: StationType::Circle, position: (10., -30.) });
-                        self.model.stations.push(Station { t: StationType::Square, position: (-45., 70.) });
-                        self.model.stations.push(Station { t: StationType::Triangle, position: (300., 30.) });
+                        self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
+                        self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
+                        self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
                             self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
@@ -592,7 +601,7 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
             if self.random.gen() < chance {
                 let x = self.random.gen() * 200. - 100.;
                 let y = self.random.gen() * 600. - 300.;
-                self.model.stations.push(Station { t: StationType::Triangle, position: (x as f32, y as f32) });
+                self.model.stations.push(Station::new(StationType::Triangle, (x as f32, y as f32)));
                 self.ticks_since_last_station = 0;
             }
         }
@@ -756,14 +765,14 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_origin = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_dest = Station {
-            t: StationType::Circle,
-            position: (10., 20.),
-        };
+        let test_origin = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_dest = Station::new (
+            StationType::Circle,
+            (10., 20.),
+        );
 
         let test_edge = Edge {
             origin: StationId(0),
@@ -815,14 +824,14 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_origin = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_dest = Station {
-            t: StationType::Circle,
-            position: (10., 20.),
-        };
+        let test_origin = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_dest = Station::new (
+            StationType::Circle,
+            (10., 20.),
+        );
 
         let test_edge = Edge {
             origin: StationId(0),
@@ -895,18 +904,18 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_loc1 = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_loc2 = Station {
-            t: StationType::Circle,
-            position: (10., 20.),
-        };
-        let test_loc3 = Station {
-            t: StationType::Circle,
-            position: (30., 10.),
-        };
+        let test_loc1 = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_loc2 = Station::new (
+            StationType::Circle,
+            (10., 20.),
+        );
+        let test_loc3 = Station::new (
+            StationType::Circle,
+            (30., 10.),
+        );
 
         let test_edge1 = Edge {
             origin: StationId(0),
@@ -1012,18 +1021,18 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_loc1 = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_loc2 = Station {
-            t: StationType::Circle,
-            position: (10., 20.),
-        };
-        let test_loc3 = Station {
-            t: StationType::Circle,
-            position: (30., 10.),
-        };
+        let test_loc1 = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_loc2 = Station::new (
+            StationType::Circle,
+            (10., 20.),
+        );
+        let test_loc3 = Station::new (
+            StationType::Circle,
+            (30., 10.),
+        );
 
         let test_edge1 = Edge {
             origin: StationId(0),
@@ -1098,14 +1107,14 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_loc1 = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_loc2 = Station {
-            t: StationType::Triangle,
-            position: (10., 20.),
-        };
+        let test_loc1 = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_loc2 = Station::new (
+            StationType::Triangle,
+            (10., 20.),
+        );
 
         let test_edge1 = Edge {
             origin: StationId(0),
@@ -1170,18 +1179,18 @@ mod tests {
         let player = PlayerId::new(0);
         let mut m = MetroModel::new();
 
-        let test_loc1 = Station {
-            t: StationType::Circle,
-            position: (0., 0.),
-        };
-        let test_loc2 = Station {
-            t: StationType::Triangle,
-            position: (10., 20.),
-        };
-        let test_loc3 = Station {
-            t: StationType::Triangle,
-            position: (20., 0.),
-        };
+        let test_loc1 = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        let test_loc2 = Station::new (
+            StationType::Triangle,
+            (10., 20.),
+        );
+        let test_loc3 = Station::new (
+            StationType::Triangle,
+            (20., 0.),
+        );
         m.stations.push(test_loc1);
         m.stations.push(test_loc2);
         m.stations.push(test_loc3);
