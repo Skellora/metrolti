@@ -1168,4 +1168,35 @@ mod tests {
         m.update();
         assert_eq!((10., 10.), m.trains[0].position);
     }
+
+    #[test]
+    pub fn can_create_loop() {
+        let player = PlayerId::new(0);
+        let mut m = MetroModel::new();
+
+        let test_loc1 = Station {
+            t: StationType::Circle,
+            position: (0., 0.),
+        };
+        let test_loc2 = Station {
+            t: StationType::Triangle,
+            position: (10., 20.),
+        };
+        let test_loc3 = Station {
+            t: StationType::Triangle,
+            position: (20., 0.),
+        };
+        m.stations.push(test_loc1);
+        m.stations.push(test_loc2);
+        m.stations.push(test_loc3);
+        m.lines.push(Line { edges: vec![ ], colour: (0., 0., 0.), owning_player: player });
+
+        m.start_new_line(&player, &StationId(0), &StationId(1));
+        assert_eq!(1, m.lines[0].edges.len());
+        m.insert_after_line(&LineId(0), &StationId(2));
+        assert_eq!(2, m.lines[0].edges.len());
+        m.insert_after_line(&LineId(0), &StationId(0));
+        //Shouldn't fail
+        //assert_eq!(3, m.lines[0].edges.len());
+    }
 }
