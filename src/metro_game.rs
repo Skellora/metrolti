@@ -499,6 +499,27 @@ impl MetroModel {
             line.edges.push(Edge { origin: line_dest_if_valid, destination: new_station.clone(), via_point: via.clone() });
         }
     }
+
+    pub fn is_valid_station_pos(&self, pos: &Point) -> bool {
+        let (ref x, ref y) = pos;
+        if x < &self.min_x || x > &self.max_x {
+            return false;
+        }
+        if y < &self.min_y || y > &self.max_y {
+            return false;
+        }
+        let max_square_distance = (self.station_size + self.station_size).pow(2) as f32;
+        for existing_station in self.stations.iter() {
+            let (ref other_x, ref other_y) = existing_station.position;
+            let diff_x = x - other_x;
+            let diff_y = y - other_y;
+            let square_distance = diff_x.powi(2) + diff_y.powi(2);
+            if square_distance < max_square_distance {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 fn remove_first<T: Eq>(v: &mut Vec<T>, t: &T) {
@@ -659,7 +680,9 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                 let height = self.model.max_y - self.model.min_y;
                 let x = self.random.gen() as f32 * width + self.model.min_x;
                 let y = self.random.gen() as f32 * height + self.model.min_y;
-                self.model.stations.push(Station::new(StationType::Triangle, (x, y)));
+                if self.model.is_valid_station_pos(&(x, y)) {
+                    self.model.stations.push(Station::new(StationType::Triangle, (x, y)));
+                }
                 self.ticks_since_last_station = 0;
             }
         }
