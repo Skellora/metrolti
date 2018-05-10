@@ -186,6 +186,11 @@ impl MetroModel {
         self.stations.get(index)
     }
 
+    pub fn get_station_mut(&mut self, id: &StationId) -> Option<&mut Station> {
+        let &StationId(index) = id;
+        self.stations.get_mut(index)
+    }
+
     pub fn get_train(&self, id: &TrainId) -> Option<&Train> {
         let &TrainId(index) = id;
         self.trains.get(index)
@@ -341,19 +346,52 @@ impl MetroModel {
             })
     }
 
+    fn boarding_passenger(&self, id: &TrainId) -> Option<StationType> {
+        self.get_train(id)
+            .and_then(|t| {
+                self.get_at_station(id)
+                    .and_then(|s_id| self.get_station(&s_id))
+                    .and_then(|s| Some((t, s)))
+            })
+            .and_then(|(t, s)| {
+                if t.position != s.position {
+                    return None;
+                }
+                if t.passengers.len() == 6 {
+                    return None
+                }
+                s.passengers.first().cloned()
+            })
+    }
+
     fn handle_train_arrival(&mut self, id: &TrainId) {
-        if let Some(alighting) = self.alighting_passenger(id) {
-            self.get_train_mut(id)
-                .map(|t: &mut Train| {
-                    t.passenger_wait = t.passenger_wait.map(|w| w - 1).or(Some(30));
-                     if t.passenger_wait == Some(0) {
-                        remove_first(&mut t.passengers, &alighting);
-                        t.passenger_wait = Some(30);
-                     }
-                });
-        } else {
-            self.get_train_mut(id)
-                .map(|t: &mut Train| t.passenger_wait = None);
+        self.get_train_mut(id).map(|t| t.passenger_wait = t.passenger_wait.map(|w| w - 1));
+        let t_pass = self.get_train(id).map(|t| t.passenger_wait);
+        let can_transfer = t_pass == Some(Some(0));
+        let can_start_new = can_transfer || t_pass == Some(None);
+        if can_transfer {
+            if let Some(alighting) = self.alighting_passenger(id) {
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| remove_first(&mut t.passengers, &alighting));
+            } else if let Some(boarding) = self.boarding_passenger(id) {
+                self.get_at_station(id)
+                    .and_then(|s_id| self.get_station_mut(&s_id))
+                    .map(|s| remove_first(&mut s.passengers, &boarding));
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| t.passengers.push(boarding));
+            }
+        }
+        if can_start_new {
+            if let Some(_alighting) = self.alighting_passenger(id) {
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| t.passenger_wait = Some(30));
+            } else if let Some(_boarding) = self.boarding_passenger(id) {
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| t.passenger_wait = Some(30));
+            } else {
+                self.get_train_mut(id)
+                    .map(|t: &mut Train| t.passenger_wait = None);
+            }
         }
     }
 
