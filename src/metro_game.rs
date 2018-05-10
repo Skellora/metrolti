@@ -508,7 +508,7 @@ impl MetroModel {
         if y < &self.min_y || y > &self.max_y {
             return false;
         }
-        let max_square_distance = (self.station_size + self.station_size).pow(2) as f32;
+        let max_square_distance = ((self.station_size + self.station_size) as f32).powi(2);
         for existing_station in self.stations.iter() {
             let (ref other_x, ref other_y) = existing_station.position;
             let diff_x = x - other_x;
@@ -545,6 +545,11 @@ pub struct MetroGame<T: Ticker, R: Random> {
     min_ticks_between_stations: u64,
     base_station_chance: f64,
     station_chance_per_tick: f64,
+
+    ticks_since_last_passenger: u64,
+    min_ticks_between_passengers: u64,
+    base_passenger_chance: f64,
+    passenger_chance_per_tick: f64,
 }
 
 impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
@@ -561,6 +566,11 @@ impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
             min_ticks_between_stations: 30,
             base_station_chance: 0.00005,
             station_chance_per_tick: 0.000005,
+
+            ticks_since_last_passenger: 0,
+            min_ticks_between_passengers: 30,
+            base_passenger_chance: 0.00005,
+            passenger_chance_per_tick: 0.000005,
         }
     }
     fn main(&mut self) {
@@ -686,7 +696,15 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                 self.ticks_since_last_station = 0;
             }
         }
+        if let Some(spawnable_ticks) = self.ticks_since_last_passenger.checked_sub(self.min_ticks_between_passengers) {
+            let chance = self.base_passenger_chance + self.passenger_chance_per_tick * spawnable_ticks as f64;
+            if self.random.gen() < chance {
+                self.model.stations[0].passengers.push(StationType::Triangle);
+                self.ticks_since_last_passenger = 0;
+            }
+        }
         self.ticks_since_last_station += 1;
+        self.ticks_since_last_passenger += 1;
         self.model.update();
     }
     pub fn output(&mut self) {
