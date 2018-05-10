@@ -50,6 +50,7 @@ pub type Point = (f32, f32);
 pub struct Station {
     t: StationType,
     position: Point,
+    passengers: Vec<StationType>,
 }
 
 impl Station {
@@ -57,6 +58,7 @@ impl Station {
         Self {
             t: t,
             position: position,
+            passengers: Vec::new(),
         }
     }
 }
@@ -580,8 +582,16 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
+                        self.model.stations[0].passengers.push(StationType::Square);
+                        self.model.stations[0].passengers.push(StationType::Triangle);
+                        self.model.stations[0].passengers.push(StationType::Square);
+                        self.model.stations[0].passengers.push(StationType::Triangle);
+                        self.model.stations[0].passengers.push(StationType::Square);
+                        self.model.stations[0].passengers.push(StationType::Triangle);
                         self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
+                        self.model.stations[1].passengers.push(StationType::Triangle);
                         self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
+                        self.model.stations[2].passengers.push(StationType::Circle);
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
                             self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
