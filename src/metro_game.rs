@@ -1194,8 +1194,6 @@ mod tests {
         }
         assert_eq!((10., 20.), m.trains[0].position);
         assert_eq!(vec![StationType::Circle, StationType::Square, StationType::Circle], m.trains[0].passengers);
-        // An extra tick to check no more
-        m.update();
 
         m.update();
         assert_eq!((10., 10.), m.trains[0].position);
@@ -1215,8 +1213,6 @@ mod tests {
         }
         assert_eq!((0., 0.), m.trains[0].position);
         assert_eq!(vec![StationType::Square], m.trains[0].passengers);
-        // An extra tick to check no more
-        m.update();
 
         m.update();
         assert_eq!((10., 10.), m.trains[0].position);
