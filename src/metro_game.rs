@@ -170,6 +170,10 @@ pub struct MetroModel {
     lines: Vec<Line>,
     trains: Vec<Train>,
     station_size: u8,
+    min_x: f32,
+    min_y: f32,
+    max_x: f32,
+    max_y: f32,
 }
 
 impl MetroModel {
@@ -179,6 +183,10 @@ impl MetroModel {
             station_size: 26u8,
             lines: Vec::new(),
             trains: Vec::new(),
+            min_x: -500.,
+            min_y: -500.,
+            max_x: 500.,
+            max_y: 500.,
         }
     }
     pub fn get_station(&self, id: &StationId) -> Option<&Station> {
@@ -647,9 +655,11 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
         if let Some(spawnable_ticks) = self.ticks_since_last_station.checked_sub(self.min_ticks_between_stations) {
             let chance = self.base_station_chance + self.station_chance_per_tick * spawnable_ticks as f64;
             if self.random.gen() < chance {
-                let x = self.random.gen() * 200. - 100.;
-                let y = self.random.gen() * 600. - 300.;
-                self.model.stations.push(Station::new(StationType::Triangle, (x as f32, y as f32)));
+                let width = self.model.max_x - self.model.min_x;
+                let height = self.model.max_y - self.model.min_y;
+                let x = self.random.gen() as f32 * width + self.model.min_x;
+                let y = self.random.gen() as f32 * height + self.model.min_y;
+                self.model.stations.push(Station::new(StationType::Triangle, (x, y)));
                 self.ticks_since_last_station = 0;
             }
         }
