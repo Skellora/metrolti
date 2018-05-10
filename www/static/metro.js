@@ -145,6 +145,8 @@ let metro = (function() {
   }
 
   function draw_stations() {
+    let passengerSize = game_model.state.station_size / 2.5;
+    let passengerMargin = 2;
     let station_size = game_model.state.station_size;
     let station_border_size = station_size / 5;
 
@@ -160,6 +162,18 @@ let metro = (function() {
         }
         glShapes.drawShape(gl, program, shape, station_pos, colour, station_size, station_size, 0);
         glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size, station_size - station_border_size, 0);
+        for (let p = 0; p < station.passengers.length; p++) {
+          let passenger = station.passengers[p];
+          let passengersX = station_pos[0] + (station_size / 2) + (passengerSize / 2) + passengerMargin;
+          let passengerX = passengersX + (p % 5) * (passengerSize + passengerMargin);
+          let passengersY = station_pos[1] - (station_size / 2) + (passengerSize / 2);
+          let passengerY = passengersY + Math.floor(p / 5) * (passengerSize + passengerMargin);
+          let passengerPos = [ passengerX, passengerY];
+          let shape = stationShape(passenger);
+          if (shape !== null) {
+            glShapes.drawShape(gl, program, shape, passengerPos, [0, 0, 0], passengerSize, passengerSize, 0);
+          }
+        }
       }
     }
   }
