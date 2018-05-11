@@ -682,6 +682,16 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
             }
         }
     }
+    fn random_station_type(&self) -> StationType {
+        let roll = self.random.gen();
+        if roll < 0.4 {
+            StationType::Circle
+        } else if roll < 0.7 {
+            StationType::Square
+        } else {
+            StationType::Triangle
+        }
+    }
     pub fn update(&mut self) {
         if let Some(spawnable_ticks) = self.ticks_since_last_station.checked_sub(self.min_ticks_between_stations) {
             let chance = self.base_station_chance + self.station_chance_per_tick * spawnable_ticks as f64;
@@ -691,7 +701,8 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                 let x = self.random.gen() as f32 * width + self.model.min_x;
                 let y = self.random.gen() as f32 * height + self.model.min_y;
                 if self.model.is_valid_station_pos(&(x, y)) {
-                    self.model.stations.push(Station::new(StationType::Triangle, (x, y)));
+                    let station_type = self.random_station_type();
+                    self.model.stations.push(Station::new(station_type, (x, y)));
                 }
                 self.ticks_since_last_station = 0;
             }
@@ -699,7 +710,8 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
         if let Some(spawnable_ticks) = self.ticks_since_last_passenger.checked_sub(self.min_ticks_between_passengers) {
             let chance = self.base_passenger_chance + self.passenger_chance_per_tick * spawnable_ticks as f64;
             if self.random.gen() < chance {
-                self.model.stations[0].passengers.push(StationType::Triangle);
+                let station_type = self.random_station_type();
+                self.model.stations[0].passengers.push(station_type);
                 self.ticks_since_last_passenger = 0;
             }
         }
