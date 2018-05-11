@@ -329,7 +329,7 @@ let metro = (function() {
         game_started = true;
       }
     }
-    if (message.You) {
+    if (typeof message.You != undefined) {
       this_player = message.You;
     }
   }
