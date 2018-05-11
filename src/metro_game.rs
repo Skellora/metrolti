@@ -41,7 +41,7 @@ pub enum StationType {
     Square,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Hash)]
 pub struct StationId(pub usize);
 
 pub type Point = (f32, f32);
@@ -546,7 +546,7 @@ pub struct MetroGame<T: Ticker, R: Random> {
     base_station_chance: f64,
     station_chance_per_tick: f64,
 
-    ticks_since_last_passenger: u64,
+    ticks_since_last_passenger: Vec<u64>,
     min_ticks_between_passengers: u64,
     base_passenger_chance: f64,
     passenger_chance_per_tick: f64,
@@ -567,7 +567,7 @@ impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
             base_station_chance: 0.00005,
             station_chance_per_tick: 0.000005,
 
-            ticks_since_last_passenger: 0,
+            ticks_since_last_passenger: Vec::new(),
             min_ticks_between_passengers: 30,
             base_passenger_chance: 0.00005,
             passenger_chance_per_tick: 0.000005,
@@ -707,16 +707,21 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                 self.ticks_since_last_station = 0;
             }
         }
-        if let Some(spawnable_ticks) = self.ticks_since_last_passenger.checked_sub(self.min_ticks_between_passengers) {
-            let chance = self.base_passenger_chance + self.passenger_chance_per_tick * spawnable_ticks as f64;
-            if self.random.gen() < chance {
-                let station_type = self.random_station_type();
-                self.model.stations[0].passengers.push(station_type);
-                self.ticks_since_last_passenger = 0;
-            }
-        }
         self.ticks_since_last_station += 1;
-        self.ticks_since_last_passenger += 1;
+        self.ticks_since_last_passenger.resize(self.model.stations.len(), 0);
+        for i in 0..self.model.stations.len() {
+            if let Some(spawnable_ticks) = self.ticks_since_last_passenger[i].checked_sub(self.min_ticks_between_passengers) {
+                let chance = self.base_passenger_chance + self.passenger_chance_per_tick * spawnable_ticks as f64;
+                if self.random.gen() < chance {
+                    let station_type = self.random_station_type();
+                    let station = StationId(i);
+                    self.model.get_station_mut(&station)
+                        .map(|s| s.passengers.push(station_type));
+                    self.ticks_since_last_passenger[i] = 0;
+                }
+            }
+            self.ticks_since_last_passenger[i] += 1;
+        }
         self.model.update();
     }
     pub fn output(&mut self) {
