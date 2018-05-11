@@ -716,7 +716,10 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                     let station_type = self.random_station_type();
                     let station = StationId(i);
                     self.model.get_station_mut(&station)
-                        .map(|s| s.passengers.push(station_type));
+                        .map(|s| 
+                             if s.t != station_type {
+                                 s.passengers.push(station_type)
+                             });
                     self.ticks_since_last_passenger[i] = 0;
                 }
             }
