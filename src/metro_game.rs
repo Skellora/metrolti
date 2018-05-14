@@ -230,16 +230,7 @@ impl MetroModel {
         } else {
             return
         };
-        let mut train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
-        let mut rng = thread_rng();
-        for _ in 0..6 {
-            let st = match rng.gen_range(0, 3) {
-                0 => StationType::Triangle,
-                1 => StationType::Square,
-                _ => StationType::Circle,
-            };
-            train.passengers.push(st);
-        }
+        let train = Train::new(id.clone(), self.get_station_pos(&station1).unwrap_or((0f32,0f32)), via, true, station1, station2, 1.);
         self.trains.push(train);
     }
 
@@ -659,16 +650,8 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
-                        self.model.stations[0].passengers.push(StationType::Square);
-                        self.model.stations[0].passengers.push(StationType::Triangle);
-                        self.model.stations[0].passengers.push(StationType::Square);
-                        self.model.stations[0].passengers.push(StationType::Triangle);
-                        self.model.stations[0].passengers.push(StationType::Square);
-                        self.model.stations[0].passengers.push(StationType::Triangle);
                         self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
-                        self.model.stations[1].passengers.push(StationType::Triangle);
                         self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
-                        self.model.stations[2].passengers.push(StationType::Circle);
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
                             self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
