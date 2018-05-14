@@ -45,7 +45,7 @@ fn demo_player(addr: &str) {
         DemoAction::WaitTime(2),
         DemoAction::Act(game::PlayerAction::StartGame),
         DemoAction::WaitTime(2),
-        DemoAction::Act(game::PlayerAction::ConnectStations(game::StationId(2), game::StationId(0))),
+        DemoAction::Act(game::PlayerAction::NewLine(game::StationId(2), game::StationId(0))),
         DemoAction::Act(game::PlayerAction::InsertAtLineEnd(game::LineId(0), game::StationId(1))),
         DemoAction::Act(game::PlayerAction::InsertAtLineEnd(game::LineId(1), game::StationId(1))),
     ];
