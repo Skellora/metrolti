@@ -13,7 +13,6 @@ use randoms::*;
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PlayerAction {
     StartGame,
-    ConnectStations(StationId, StationId),
     NewLine(StationId, StationId),
     InsertAtLineBeginning(LineId, StationId),
     InsertAtLineEnd(LineId, StationId),
@@ -600,15 +599,6 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
             }
             InputEvent::PlayerAction(p_id, action) => { 
                 match action {
-                    PlayerAction::ConnectStations(src, tgt) => {
-                        self.model.start_new_line(&p_id, &src, &tgt);
-                        let mut line_id = LineId(0);
-                        for (index, line) in self.model.lines.iter().enumerate() {
-                            if line.owning_player != p_id { continue; }
-                            line_id = LineId(index);
-                        }
-                        self.model.add_train_to_line(&line_id);
-                    }
                     PlayerAction::NewLine(src, tgt) => {
                         let new_id = self.model.start_new_line(&p_id, &src, &tgt);
                         if let Some(new_id) = new_id {
@@ -840,7 +830,7 @@ mod tests {
         assert_is_game_start(&pr2.recv().unwrap());
         let attempt_src = StationId(0);
         let attempt_tgt = StationId(1);
-        send_player_action(&gs, 1, PlayerAction::ConnectStations(attempt_src.clone(), attempt_tgt.clone()));
+        send_player_action(&gs, 1, PlayerAction::NewLine(attempt_src.clone(), attempt_tgt.clone()));
         tick(&ticks);
         assert_has_edge(&pr1.recv().unwrap(), &attempt_src, &attempt_tgt, Some((-45., 25.)));
         assert_has_edge(&pr2.recv().unwrap(), &attempt_src, &attempt_tgt, Some((-45., 25.)));
@@ -854,7 +844,7 @@ mod tests {
         tick(&ticks);
         assert_eq!(Ok(StateUpdate::You(PlayerId::new(1))), pr1.recv());
         pr1.recv().unwrap();
-        send_player_action(&gs, 1, PlayerAction::ConnectStations(StationId(0), StationId(1)));
+        send_player_action(&gs, 1, PlayerAction::NewLine(StationId(0), StationId(1)));
         tick(&ticks);
         pr1.recv().unwrap();
         send_player_action(&gs, 1, PlayerAction::InsertAtLineBeginning(LineId(0), StationId(2)));
