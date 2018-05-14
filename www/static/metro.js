@@ -132,6 +132,30 @@ let metro = (function() {
       , -1, 1);
   }
 
+  function canvasPointToGlPoint(canvasX, canvasY) {
+    let halfCanvasWidth = displayElements.canvas.width / 2;
+    let halfCanvasHeight = displayElements.canvas.height / 2;
+    let centeredX = canvasX - halfCanvasWidth;
+    let centeredY = canvasY - halfCanvasHeight;
+    let glX = centeredX / halfCanvasWidth;
+    let glY = -(centeredY / halfCanvasHeight);
+    return [glX, glY];
+  }
+
+  function getWorldCoords(canvasX, canvasY) {
+    let glPoint = canvasPointToGlPoint(canvasX, canvasY);
+    let projection = getProjectionMatrix();
+    let unProjection = projection.inverse();
+    if (unProjection === null) {
+      return [canvasX, canvasY];
+    }
+    let v = $V([glPoint[0], glPoint[1], 0, 1]).toDiagonalMatrix();
+    let unprojected = v.x(unProjection);
+    let worldX = unprojected.e(1, 1);
+    let worldY = unprojected.e(2, 2);
+    return [worldX, worldY];
+  }
+
   function stationShape(shapeName) {
     switch (shapeName) {
     case 'Circle':
@@ -142,6 +166,10 @@ let metro = (function() {
       return glShapes.triangle(gl);
     }
     return null;
+  }
+
+  function edge_thickness() {
+    return game_model.state.station_size / 2.5;
   }
 
   function draw_stations() {
@@ -179,15 +207,15 @@ let metro = (function() {
   }
 
   function draw_edges(edgeList, colour) {
-    let edge_thickness = game_model.state.station_size / 2.5;
+    let thickness = edge_thickness();
     for (let i = 0; i < edgeList.length; i++) {
       let edge = edgeList[i];
       let srcStn = game_model.state.stations[edge.origin];
       let tgtStn = game_model.state.stations[edge.destination];
       let via = edge.via_point;
       if (srcStn && tgtStn) {
-        glShapes.drawLine(gl, program, srcStn.position[0], srcStn.position[1], via[0], via[1], edge_thickness, colour);
-        glShapes.drawLine(gl, program, via[0], via[1], tgtStn.position[0], tgtStn.position[1], edge_thickness, colour);
+        glShapes.drawLine(gl, program, srcStn.position[0], srcStn.position[1], via[0], via[1], thickness, colour);
+        glShapes.drawLine(gl, program, via[0], via[1], tgtStn.position[0], tgtStn.position[1], thickness, colour);
       }
     }
   }
@@ -257,39 +285,41 @@ let metro = (function() {
     draw_stations();
   }
 
+  function draw_player_lines() {
+    let thickness = edge_thickness();
+    let margin = thickness / 2;
+    let top_margin = margin;
+    let player_line_count = 0;
+    for (let i = 0; i < game_model.state.lines.length; i++) {
+      let line = game_model.state.lines[i];
+      if (line.owning_player != this_player) {
+        continue;
+      }
+
+      let y = (thickness / 2) + top_margin + (thickness + margin) * player_line_count;
+
+      let p = getWorldCoords(10, y);
+      let p2 = getWorldCoords(50, y);
+      glShapes.drawLine(gl, program, p[0], p[1], p2[0], p2[1], thickness, line.colour);
+
+      player_line_count++;
+    }
+  }
+
+  function draw_HUD() {
+    draw_player_lines();
+  }
+
   function draw() {
     displayElements.count.innerText = game_model.lobby_count;
     if (!game_started) { return; }
     draw_state();
+    draw_HUD();
   }
 
   function loop() {
     draw();
     window.requestAnimationFrame(loop);
-  }
-
-  function canvasPointToGlPoint(canvasX, canvasY) {
-    let halfCanvasWidth = displayElements.canvas.width / 2;
-    let halfCanvasHeight = displayElements.canvas.height / 2;
-    let centeredX = canvasX - halfCanvasWidth;
-    let centeredY = canvasY - halfCanvasHeight;
-    let glX = centeredX / halfCanvasWidth;
-    let glY = -(centeredY / halfCanvasHeight);
-    return [glX, glY];
-  }
-
-  function getWorldCoords(canvasX, canvasY) {
-    let glPoint = canvasPointToGlPoint(canvasX, canvasY);
-    let projection = getProjectionMatrix();
-    let unProjection = projection.inverse();
-    if (unProjection === null) {
-      return [canvasX, canvasY];
-    }
-    let v = $V([glPoint[0], glPoint[1], 0, 1]).toDiagonalMatrix();
-    let unprojected = v.x(unProjection);
-    let worldX = unprojected.e(1, 1);
-    let worldY = unprojected.e(2, 2);
-    return [worldX, worldY];
   }
 
   function getStationAtScreenPoint(canvasX, canvasY) {
@@ -329,7 +359,8 @@ let metro = (function() {
         game_started = true;
       }
     }
-    if (typeof message.You != undefined) {
+    if (typeof message.You !== 'undefined') {
+      alert(message.You);
       this_player = message.You;
     }
   }
