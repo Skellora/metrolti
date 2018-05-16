@@ -645,6 +645,7 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         let mut rng = thread_rng();
                         for player in self.get_player_ids() {
                             self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
+                            self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
                         }
                     }
                     _ => {
