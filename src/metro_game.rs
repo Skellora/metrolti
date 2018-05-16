@@ -163,6 +163,11 @@ enum TrainNextTarget {
     None,
 }
 
+enum PassengerAction {
+    Destination,
+    Boarding,
+}
+
 #[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct MetroModel {
     stations: Vec<Station>,
@@ -173,6 +178,7 @@ pub struct MetroModel {
     min_y: f32,
     max_x: f32,
     max_y: f32,
+    scores: HashMap<PlayerId, u16>,
 }
 
 impl MetroModel {
@@ -186,6 +192,7 @@ impl MetroModel {
             min_y: -500.,
             max_x: 500.,
             max_y: 500.,
+            scores: HashMap::new(),
         }
     }
     pub fn get_station(&self, id: &StationId) -> Option<&Station> {
@@ -325,7 +332,7 @@ impl MetroModel {
             })
     }
 
-    fn alighting_passenger(&self, id: &TrainId) -> Option<StationType> {
+    fn station_passenger(&self, id: &TrainId) -> Option<(StationType, PassengerAction)> {
         self.get_train(id)
             .and_then(|t| {
                 self.get_at_station(id)
@@ -338,27 +345,13 @@ impl MetroModel {
                 }
                 // This will check for passengers who want to get off to change too
                 if t.passengers.contains(&s.t) {
-                    return Some(s.t.clone())
+                    return Some((s.t.clone(), PassengerAction::Destination))
+                }
+                // This will check for passengers who want to get on for a connection too
+                if t.passengers.len() < 6 {
+                    return s.passengers.first().map(|t| (t.clone(), PassengerAction::Boarding));
                 }
                 None
-            })
-    }
-
-    fn boarding_passenger(&self, id: &TrainId) -> Option<StationType> {
-        self.get_train(id)
-            .and_then(|t| {
-                self.get_at_station(id)
-                    .and_then(|s_id| self.get_station(&s_id))
-                    .and_then(|s| Some((t, s)))
-            })
-            .and_then(|(t, s)| {
-                if t.position != s.position {
-                    return None;
-                }
-                if t.passengers.len() == 6 {
-                    return None
-                }
-                s.passengers.first().cloned()
             })
     }
 
@@ -368,28 +361,30 @@ impl MetroModel {
         let can_transfer = t_pass == Some(Some(0));
         let can_start_new = can_transfer || t_pass == Some(None);
         if can_transfer {
-            if let Some(alighting) = self.alighting_passenger(id) {
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| remove_first(&mut t.passengers, &alighting));
-            } else if let Some(boarding) = self.boarding_passenger(id) {
-                self.get_at_station(id)
-                    .and_then(|s_id| self.get_station_mut(&s_id))
-                    .map(|s| remove_first(&mut s.passengers, &boarding));
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| t.passengers.push(boarding));
+            match self.station_passenger(id) {
+                Some((passenger, PassengerAction::Destination)) =>  {
+                    self.get_train_mut(id)
+                        .map(|t: &mut Train| remove_first(&mut t.passengers, &passenger));
+                }
+                Some((passenger, PassengerAction::Boarding)) =>  {
+                    self.get_at_station(id)
+                        .and_then(|s_id| self.get_station_mut(&s_id))
+                        .map(|s| remove_first(&mut s.passengers, &passenger));
+                    self.get_train_mut(id)
+                        .map(|t: &mut Train| t.passengers.push(passenger));
+                }
+                _ => {}
             }
         }
         if can_start_new {
-            if let Some(_alighting) = self.alighting_passenger(id) {
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| t.passenger_wait = Some(30));
-            } else if let Some(_boarding) = self.boarding_passenger(id) {
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| t.passenger_wait = Some(30));
-            } else {
-                self.get_train_mut(id)
-                    .map(|t: &mut Train| t.passenger_wait = None);
-            }
+            match self.station_passenger(id) {
+                Some(_) => 
+                    self.get_train_mut(id)
+                        .map(|t: &mut Train| t.passenger_wait = Some(30)),
+                None =>
+                    self.get_train_mut(id)
+                        .map(|t: &mut Train| t.passenger_wait = None),
+            };
         }
     }
 
