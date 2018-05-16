@@ -322,23 +322,25 @@ let metro = (function() {
     window.requestAnimationFrame(loop);
   }
 
-  function getStationAtScreenPoint(canvasX, canvasY) {
-    let worldPoint = getWorldCoords(canvasX, canvasY);
-    let x = worldPoint[0];
-    let y = worldPoint[1];
+  function squareDistance(x1, y1, x2, y2) {
+    let xDiff = x1 - x2;
+    let yDiff = y1 - y2;
+    return xDiff * xDiff + yDiff * yDiff;
+  }
+
+  function getClosestToWorldPoint(x, y) {
+    let currentClosest = null;
+    let currentSqrDist = null;
     for (let i = 0; i < game_model.state.stations.length; i++) {
       let station = game_model.state.stations[i];
-      let stationRight = station.position[0] + game_model.state.station_size / 2;
-      let stationLeft = station.position[0] - game_model.state.station_size / 2;
-      let stationTop = station.position[1] - game_model.state.station_size / 2;
-      let stationBottom = station.position[1] + game_model.state.station_size / 2;
-      if (x > stationRight) { continue; }
-      if (x < stationLeft) { continue; }
-      if (y > stationBottom) { continue; }
-      if (y < stationTop) { continue; }
-      return i;
+      let sqrDist = squareDistance(x, y, station.position[0], station.position[1]);
+      if (currentClosest === null || sqrDist < currentSqrDist) {
+        alert(station.position + ' is ' + sqrDist + ' away from ' + [x, y]);
+        currentClosest = i;
+        currentSqrDist = sqrDist;
+      }
     }
-    return null;
+    return [currentClosest, currentSqrDist];
   }
 
   let ws = null;
@@ -427,17 +429,39 @@ let metro = (function() {
     }
   }
 
-  function handlePointerDown(x, y) {
+  function handlePointerDown(x, y, pointerRadius) {
     if (!game_started) {
       sendStartGame();
     } else {
-      handleStationDown(getStationAtScreenPoint(x, y));
+      let worldPointer = getWorldCoords(x, y);
+      alert('World pointer: ' + worldPointer);
+      let worldOuter = getWorldCoords(x + pointerRadius, y);
+      alert('World outer: ' + worldOuter);
+      let closest = getClosestToWorldPoint(worldPointer[0], worldPointer[1]);
+      let closestId = closest[0];
+      let closestDistance = closest[1];
+      let worldPointerRadius = squareDistance(worldPointer[0], worldPointer[1], worldOuter[0], worldOuter[1]);
+      if (closestDistance <= worldPointerRadius) {
+        handleStationDown(closestId);
+      } else {
+        alert(closestDistance + ' > ' + worldPointerRadius);
+      }
     }
   }
 
-  function handlePointerUp(x, y) {
+  function handlePointerUp(x, y, pointerRadius) {
     if (game_started) {
-      handleStationUp(getStationAtScreenPoint(x, y));
+      let worldPointer = getWorldCoords(x, y);
+      alert('World pointer: ' + worldPointer);
+      let worldOuter = getWorldCoords(x + pointerRadius, y);
+      alert('World outer: ' + worldOuter);
+      let closest = getClosestToWorldPoint(worldPointer[0], worldPointer[1]);
+      let closestId = closest[0];
+      let closestDistance = closest[1];
+      let worldPointerRadius = squareDistance(worldPointer[0], worldPointer[1], worldOuter[0], worldOuter[1]);
+      if (closestDistance <= worldPointerRadius) {
+        handleStationUp(closestId);
+      }
     }
   }
 
@@ -447,26 +471,26 @@ let metro = (function() {
       let bounding = displayElements.canvas.getBoundingClientRect();
       let x = touchPoint.pageX - bounding.x;
       let y = touchPoint.pageY - bounding.y;
-      handlePointerDown(x, y);
+      handlePointerDown(x, y, displayElements.canvas.width);
     });
     window.addEventListener('touchend', function(e) {
       let touchPoint = e.changedTouches[0];
       let bounding = displayElements.canvas.getBoundingClientRect();
       let x = touchPoint.pageX - bounding.x;
       let y = touchPoint.pageY - bounding.y;
-      handlePointerUp(x, y);
+      handlePointerUp(x, y, displayElements.canvas.width);
     });
     window.addEventListener('mousedown', function(e) {
       let bounding = displayElements.canvas.getBoundingClientRect();
       let x = e.clientX - bounding.x;
       let y = e.clientY - bounding.y;
-      handlePointerDown(x, y);
+      handlePointerDown(x, y, 1);
     });
     window.addEventListener('mouseup', function(e) {
       let bounding = displayElements.canvas.getBoundingClientRect();
       let x = e.clientX - bounding.x;
       let y = e.clientY - bounding.y;
-      handlePointerUp(x, y);
+      handlePointerUp(x, y, 1);
     });
   }
 
