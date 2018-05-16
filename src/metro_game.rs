@@ -540,6 +540,11 @@ pub struct MetroGame<T: Ticker, R: Random> {
     min_ticks_between_passengers: u64,
     base_passenger_chance: f64,
     passenger_chance_per_tick: f64,
+
+    ticks_per_week: u64,
+    ticks_since_weekend: u64,
+
+    max_lines_per_player: u8,
 }
 
 impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
@@ -561,6 +566,11 @@ impl<T: Ticker, R: Random> Game<T, R> for MetroGame<T, R> {
             min_ticks_between_passengers: 30,
             base_passenger_chance: 0.00005,
             passenger_chance_per_tick: 0.000005,
+
+            ticks_per_week: 4200,
+            ticks_since_weekend: 0,
+
+            max_lines_per_player: 7,
         }
     }
     fn main(&mut self) {
@@ -642,10 +652,8 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
                         self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
                         self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
-                        let mut rng = thread_rng();
                         for player in self.get_player_ids() {
-                            self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
-                            self.model.lines.push(Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player });
+                            self.add_line_for_player(&player);
                         }
                     }
                     _ => {
@@ -656,6 +664,36 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
             }
         }
     }
+
+    fn add_line_for_player(&mut self, player_id: &PlayerId) {
+        let mut rng = thread_rng();
+        let new_line = Line { edges: Vec::new(), colour: (rng.gen(), rng.gen(), rng.gen()), owning_player: player_id.clone() };
+        self.model.lines.push(new_line);
+    }
+
+    fn finish_week(&mut self) {
+        println!("Le weekend");
+        for player in self.get_player_ids() {
+            let mut player_line_count = 0;
+            for line in self.model.lines.iter() {
+                if line.owning_player == player {
+                    player_line_count += 1;
+                }
+            }
+            if player_line_count < self.max_lines_per_player {
+                self.add_line_for_player(&player);
+            }
+        }
+        self.ticks_since_weekend = 0;
+    }
+
+    fn update_week(&mut self) {
+        self.ticks_since_weekend += 1;
+        if self.ticks_since_weekend >= self.ticks_per_week {
+            self.finish_week();
+        }
+    }
+
     fn random_station_type(&self) -> StationType {
         let roll = self.random.gen();
         if roll < 0.4 {
@@ -699,6 +737,7 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
             }
             self.ticks_since_last_passenger[i] += 1;
         }
+        self.update_week();
         self.model.update();
     }
     pub fn output(&mut self) {
