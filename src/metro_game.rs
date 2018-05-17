@@ -365,6 +365,10 @@ impl MetroModel {
                 Some((passenger, PassengerAction::Destination)) =>  {
                     self.get_train_mut(id)
                         .map(|t: &mut Train| remove_first(&mut t.passengers, &passenger));
+                    let owning_player = self.get_train(id).and_then(|t| self.get_line(&t.on_line)).map(|l| l.owning_player);
+                    if let Some(p) = owning_player {
+                        *self.scores.entry(p).or_insert(0) += 1;
+                    }
                 }
                 Some((passenger, PassengerAction::Boarding)) =>  {
                     self.get_at_station(id)
