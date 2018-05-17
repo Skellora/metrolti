@@ -306,8 +306,25 @@ let metro = (function() {
     }
   }
 
+  function set_player_score() {
+    if (typeof game_model.state.scores !== 'undefined') {
+      let playerScore = game_model.state.scores[this_player] || 0;
+      displayElements.score.innerHTML = 'Score: ' + playerScore;
+      let canvasRect = displayElements.canvas.getBoundingClientRect();
+      let canvasWidth = canvasRect.width;
+      let canvasLeft = canvasRect.left;
+      let canvasTop = canvasRect.top;
+      let thisWidth = displayElements.score.getBoundingClientRect().width;
+      let left = canvasWidth + canvasLeft - 30 - thisWidth;
+      let top = canvasTop + 10;
+      let styleString = 'position:absolute;left:' + left + 'px;' + 'top:' + top + 'px;';
+      displayElements.score.style = styleString;
+    }
+  }
+
   function draw_HUD() {
     draw_player_lines();
+    set_player_score();
   }
 
   function draw() {
@@ -335,7 +352,6 @@ let metro = (function() {
       let station = game_model.state.stations[i];
       let sqrDist = squareDistance(x, y, station.position[0], station.position[1]);
       if (currentClosest === null || sqrDist < currentSqrDist) {
-        alert(station.position + ' is ' + sqrDist + ' away from ' + [x, y]);
         currentClosest = i;
         currentSqrDist = sqrDist;
       }
@@ -434,17 +450,13 @@ let metro = (function() {
       sendStartGame();
     } else {
       let worldPointer = getWorldCoords(x, y);
-      alert('World pointer: ' + worldPointer);
       let worldOuter = getWorldCoords(x + pointerRadius, y);
-      alert('World outer: ' + worldOuter);
       let closest = getClosestToWorldPoint(worldPointer[0], worldPointer[1]);
       let closestId = closest[0];
       let closestDistance = closest[1];
       let worldPointerRadius = squareDistance(worldPointer[0], worldPointer[1], worldOuter[0], worldOuter[1]);
       if (closestDistance <= worldPointerRadius) {
         handleStationDown(closestId);
-      } else {
-        alert(closestDistance + ' > ' + worldPointerRadius);
       }
     }
   }
@@ -452,9 +464,7 @@ let metro = (function() {
   function handlePointerUp(x, y, pointerRadius) {
     if (game_started) {
       let worldPointer = getWorldCoords(x, y);
-      alert('World pointer: ' + worldPointer);
       let worldOuter = getWorldCoords(x + pointerRadius, y);
-      alert('World outer: ' + worldOuter);
       let closest = getClosestToWorldPoint(worldPointer[0], worldPointer[1]);
       let closestId = closest[0];
       let closestDistance = closest[1];
@@ -494,7 +504,7 @@ let metro = (function() {
     });
   }
 
-  function setup(websocketAddress, gameEl, lobbyEl, statusEl, countEl, canvasEl) {
+  function setup(websocketAddress, gameEl, lobbyEl, statusEl, countEl, canvasEl, scoreEl) {
     hideElement(gameEl);
     showElement(lobbyEl);
     displayElements.status = statusEl;
@@ -502,6 +512,7 @@ let metro = (function() {
     displayElements.canvas = canvasEl;
     displayElements.count = countEl;
     displayElements.game = gameEl;
+    displayElements.score = scoreEl;
     canvasEl.width = document.body.clientWidth;
     canvasEl.height = document.body.clientHeight;
 

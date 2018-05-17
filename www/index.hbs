@@ -15,15 +15,18 @@
         let canvasEl = document.getElementById('game-canvas');
         let gameEl = document.getElementById('game-content');
         let lobbyEl = document.getElementById('lobby-content');
-        metro.setup('ws://{{ websocket }}', gameEl, lobbyEl, statusEl, countEl, canvasEl);
+        let scoreEl = document.getElementById('score-p');
+        metro.setup('ws://{{ websocket }}', gameEl, lobbyEl, statusEl, countEl, canvasEl, scoreEl);
         metro.start();
       }
     </script>
   </head>
   <body style="overflow:hidden">
     <div>
-      <div id='game-content'>
-        <canvas id='game-canvas' width='510' height='667'></canvas>
+      <div id='game-content' style='visibility:collapsed;'>
+        <span id='score-p' style='position:absolute;'></span>
+        <canvas id='game-canvas' width='510' height='667'>
+        </canvas>
       </div>
       <div id='lobby-content'>
         <div id='status'>?</div>
