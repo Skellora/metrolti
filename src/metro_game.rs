@@ -376,7 +376,6 @@ impl MetroModel {
                 at_station.insert(p);
             }
         }
-        println!("initial is {:?}", at_station);
 
         let mut deliverable = HashSet::new();
         let line_id = &train.on_line;
@@ -387,8 +386,6 @@ impl MetroModel {
             let stations_after = line.stations_after(station_id, train.forward);
             for s_id in stations_after.iter() {
                 if let Some(station) = self.get_station(s_id) {
-                    println!("{:?} is {:?}", s_id, station.t);
-                    println!("current is {:?}", at_station);
                     if at_station.remove(&station.t) {
                         deliverable.insert(station.t.clone());
                     }
@@ -406,11 +403,8 @@ impl MetroModel {
                     if !other_stations.contains(s_id) {
                         continue;
                     }
-                    println!("Checking line({:?}) {:?}", other_line_index, other_stations);
                     for other_s_id in other_stations.iter() {
                         if let Some(station) = self.get_station(other_s_id) {
-                            println!("{:?} is {:?}", other_s_id, station.t);
-                            println!("current is {:?}", at_station);
                             if at_station.remove(&station.t) {
                                 deliverable.insert(station.t.clone());
                             }
