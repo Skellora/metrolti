@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{ HashMap, HashSet };
 use std::sync::mpsc::Receiver;
 
 use rand::{Rng, thread_rng};
@@ -33,7 +33,7 @@ enum MGameState {
     Game,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Hash)]
 pub enum StationType {
     Circle,
     Triangle,
@@ -122,6 +122,43 @@ impl Line {
             }
         }
         true
+    }
+
+    fn all_stations(&self) -> Vec<&StationId> {
+        if self.edges.len() == 0 { return Vec::new() }
+        let mut v = Vec::new();
+        v.push(&self.edges[0].origin);
+        for e in self.edges.iter() {
+            v.push(&e.destination);
+        }
+        v
+    }
+
+    fn stations_after(&self, station_id: &StationId, forward: bool) -> Vec<&StationId> {
+        let mut all = self.all_stations();
+        if !forward {
+            all.reverse();
+        }
+        if all.len() == 0 { return all; }
+        let mut station_index = 0;
+        for s in all.iter() {
+            if s == &station_id {
+                break;
+            }
+            station_index += 1;
+        }
+        if station_index >= all.len() {
+            return Vec::new();
+        }
+        if all[0] == all[all.len() - 1] {
+            all.rotate_left(station_index);
+            return all;
+        } 
+        if station_index == all.len() - 1 {
+            all.reverse();
+            return all[1..].into();
+        }
+        return all[station_index+1..].into();
     }
 }
 
@@ -332,26 +369,93 @@ impl MetroModel {
             })
     }
 
+    fn passengers_who_want_to_board(&self, train: &Train, station_id: &StationId) -> Vec<StationType> {
+        let mut at_station = HashSet::with_capacity(6);
+        if let Some(station) = self.get_station(station_id) {
+            for p in station.passengers.iter() {
+                at_station.insert(p);
+            }
+        }
+        println!("initial is {:?}", at_station);
+
+        let mut deliverable = HashSet::new();
+        let line_id = &train.on_line;
+        if let Some(line) = self.get_line(line_id) {
+            // Check each station on line for passenger drop off
+            // Then check lines from those to other drop offs
+            // Stop if we empty at_station
+            let stations_after = line.stations_after(station_id, train.forward);
+            for s_id in stations_after.iter() {
+                if let Some(station) = self.get_station(s_id) {
+                    println!("{:?} is {:?}", s_id, station.t);
+                    println!("current is {:?}", at_station);
+                    if at_station.remove(&station.t) {
+                        deliverable.insert(station.t.clone());
+                    }
+                }
+                if at_station.is_empty() {
+                    break;
+                }
+            }
+            for s_id in stations_after.iter() {
+                for (other_line_index, other_line) in self.lines.iter().enumerate() {
+                    if LineId(other_line_index) == *line_id {
+                        continue;
+                    }
+                    let other_stations = other_line.all_stations();
+                    if !other_stations.contains(s_id) {
+                        continue;
+                    }
+                    println!("Checking line({:?}) {:?}", other_line_index, other_stations);
+                    for other_s_id in other_stations.iter() {
+                        if let Some(station) = self.get_station(other_s_id) {
+                            println!("{:?} is {:?}", other_s_id, station.t);
+                            println!("current is {:?}", at_station);
+                            if at_station.remove(&station.t) {
+                                deliverable.insert(station.t.clone());
+                            }
+                        }
+                        if at_station.is_empty() {
+                            break;
+                        }
+                    }
+                    if at_station.is_empty() {
+                        break;
+                    }
+
+                }
+                if at_station.is_empty() {
+                    break;
+                }
+            }
+        }
+
+        deliverable.iter().cloned().collect()
+    }
+
     fn station_passenger(&self, id: &TrainId) -> Option<(StationType, PassengerAction)> {
         self.get_train(id)
             .and_then(|t| {
                 self.get_at_station(id)
-                    .and_then(|s_id| self.get_station(&s_id))
-                    .and_then(|s| Some((t, s)))
+                    .map(|s_id| (t, s_id))
             })
-            .and_then(|(t, s)| {
-                if t.position != s.position {
-                    return None;
-                }
-                // This will check for passengers who want to get off to change too
-                if t.passengers.contains(&s.t) {
-                    return Some((s.t.clone(), PassengerAction::Destination))
-                }
-                // This will check for passengers who want to get on for a connection too
-                if t.passengers.len() < 6 {
-                    return s.passengers.first().map(|t| (t.clone(), PassengerAction::Boarding));
-                }
-                None
+            .and_then(|(t, s_id)| {
+                self.get_station(&s_id)
+                    .and_then(|s| {
+                        if t.position != s.position {
+                            return None;
+                        }
+                        // This will check for passengers who want to get off to change too
+                        if t.passengers.contains(&s.t) {
+                            return Some((s.t.clone(), PassengerAction::Destination))
+                        }
+                        // This will check for passengers who want to get on for a connection too
+                        if t.passengers.len() < 6 {
+                            let boarding = self.passengers_who_want_to_board(&t, &s_id);
+                            return boarding.first().map(|t| (t.clone(), PassengerAction::Boarding));
+                        }
+                        None
+                    })
             })
     }
 
@@ -1299,6 +1403,74 @@ mod tests {
 
         m.update();
         assert_eq!((10., 10.), m.trains[0].position);
+    }
+
+    #[test]
+    pub fn passengers_for_change() {
+        let player = PlayerId::new(0);
+        let mut m = MetroModel::new();
+        let mut test_loc1 = Station::new (
+            StationType::Circle,
+            (0., 0.),
+        );
+        test_loc1.passengers.push(StationType::Triangle);
+        test_loc1.passengers.push(StationType::Square);
+        let mut test_loc2 = Station::new (
+            StationType::Circle,
+            (0., 10.),
+        );
+        test_loc2.passengers.push(StationType::Triangle);
+        test_loc2.passengers.push(StationType::Square);
+        let test_loc3 = Station::new (
+            StationType::Triangle,
+            (10., 0.),
+        );
+        m.stations.push(test_loc1);
+        m.stations.push(test_loc2);
+        m.stations.push(test_loc3);
+        let test_edge1 = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (0., 5.),
+        };
+        let test_edge2 = Edge {
+            origin: StationId(0),
+            destination: StationId(2),
+            via_point: (5., 0.),
+        };
+        m.lines.push(Line { edges: vec![ test_edge1 ], colour: (0., 0., 0.), owning_player: player });
+        m.lines.push(Line { edges: vec![ test_edge2 ], colour: (0., 0., 0.), owning_player: player });
+
+        let train = Train::new(LineId(0), (0., 10.), (0., 5.), true, StationId(0), StationId(1), 5.);
+        m.trains.push(train);
+        assert_eq!(vec![StationType::Triangle, StationType::Square], m.get_station(&StationId(1)).unwrap().passengers);
+        assert_eq!(vec![StationType::Triangle], m.passengers_who_want_to_board(&m.trains[0], &StationId(1)));
+
+        let train = Train::new(LineId(0), (0., 0.), (0., 5.), true, StationId(0), StationId(1), 5.);
+        m.trains.push(train);
+        assert_eq!(vec![StationType::Triangle, StationType::Square], m.get_station(&StationId(0)).unwrap().passengers);
+        assert_eq!(Vec::<StationType>::new(), m.passengers_who_want_to_board(&m.trains[1], &StationId(0)));
+    }
+
+    #[test]
+    pub fn line_stations_after() {
+        let test_edge1 = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (0., 5.),
+        };
+        let test_edge2 = Edge {
+            origin: StationId(1),
+            destination: StationId(2),
+            via_point: (5., 0.),
+        };
+        let line = Line { edges: vec![ test_edge1, test_edge2 ], colour: (0., 0., 0.), owning_player: PlayerId::new(0) };
+        assert_eq!(vec![&StationId(1), &StationId(2)], line.stations_after(&StationId(0), true));
+        assert_eq!(vec![&StationId(2)], line.stations_after(&StationId(1), true));
+        assert_eq!(vec![&StationId(1), &StationId(0)], line.stations_after(&StationId(2), true));
+        assert_eq!(vec![&StationId(1), &StationId(0)], line.stations_after(&StationId(2), false));
+        assert_eq!(vec![&StationId(0)], line.stations_after(&StationId(1), false));
+        assert_eq!(vec![&StationId(1), &StationId(2)], line.stations_after(&StationId(0), false));
     }
 
     #[test]
