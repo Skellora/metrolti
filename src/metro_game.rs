@@ -202,6 +202,7 @@ enum TrainNextTarget {
 
 enum PassengerAction {
     Destination,
+    Change,
     Boarding,
 }
 
@@ -369,6 +370,53 @@ impl MetroModel {
             })
     }
 
+    fn passengers_who_want_to_alight(&self, train: &Train, station_id: &StationId) -> Vec<StationType> {
+        let mut on_train = HashSet::with_capacity(6);
+        for p in train.passengers.iter() {
+            on_train.insert(p);
+        }
+
+        let mut deliverable = HashSet::new();
+
+        if let Some(s) = self.get_station(station_id) {
+            if on_train.remove(&s.t) {
+                deliverable.insert(s.t.clone());
+            }
+        }
+
+        let line_id = &train.on_line;
+        if let Some(line) = self.get_line(line_id) {
+            let stations_after = line.stations_after(station_id, train.forward);
+            for s_id in stations_after.iter() {
+                if let Some(station) = self.get_station(s_id) {
+                    // These guys are committed to this train
+                    on_train.remove(&station.t);
+                }
+            }
+
+            for (other_line_index, other_line) in self.lines.iter().enumerate() {
+                if LineId(other_line_index) == *line_id {
+                    continue;
+                }
+                let other_stations = other_line.all_stations();
+                if !other_stations.contains(&station_id) {
+                    continue;
+                }
+                for other_s_id in other_stations.iter() {
+                    if let Some(station) = self.get_station(other_s_id) {
+                        if on_train.remove(&station.t) {
+                            deliverable.insert(station.t.clone());
+                        }
+                    }
+                }
+                if on_train.is_empty() {
+                    break;
+                }
+            }
+        }
+        deliverable.iter().cloned().collect()
+    }
+
     fn passengers_who_want_to_board(&self, train: &Train, station_id: &StationId) -> Vec<StationType> {
         let mut at_station = HashSet::with_capacity(6);
         if let Some(station) = self.get_station(station_id) {
@@ -439,11 +487,14 @@ impl MetroModel {
                         if t.position != s.position {
                             return None;
                         }
-                        // This will check for passengers who want to get off to change too
                         if t.passengers.contains(&s.t) {
                             return Some((s.t.clone(), PassengerAction::Destination))
                         }
-                        // This will check for passengers who want to get on for a connection too
+                        if t.passengers.len() > 0 {
+                            if let Some(p) = self.passengers_who_want_to_alight(&t, &s_id).first() {
+                                return Some((p.clone(), if p == &s.t { PassengerAction::Destination } else { PassengerAction::Change }));
+                            }
+                        }
                         if t.passengers.len() < 6 {
                             let boarding = self.passengers_who_want_to_board(&t, &s_id);
                             return boarding.first().map(|t| (t.clone(), PassengerAction::Boarding));
@@ -475,7 +526,14 @@ impl MetroModel {
                     self.get_train_mut(id)
                         .map(|t: &mut Train| t.passengers.push(passenger));
                 }
-                _ => {}
+                Some((passenger, PassengerAction::Change)) =>  {
+                    self.get_train_mut(id)
+                        .map(|t: &mut Train| remove_first(&mut t.passengers, &passenger));
+                    self.get_at_station(id)
+                        .and_then(|s_id| self.get_station_mut(&s_id))
+                        .map(|s| s.passengers.push(passenger));
+                }
+                None => {}
             }
         }
         if can_start_new {
