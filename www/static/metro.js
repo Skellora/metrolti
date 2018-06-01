@@ -68,11 +68,11 @@ let glShapes = (function() {
     };
   };
 
-  let circle = function(gl) {
+  let circleFraction = function(gl, fraction) {
     let vertexCount = 40;
     let angleInc = 2 * Math.PI / vertexCount;
     let vertices = [];
-    for (let i = 0; i < vertexCount; i++) {
+    for (let i = 0; i < vertexCount * fraction; i++) {
       vertices.push(0);
       vertices.push(0);
       let x = Math.cos(i * angleInc) * 0.5;
@@ -86,8 +86,12 @@ let glShapes = (function() {
     }
     return {
       vertices: bufferFromVertices(gl, vertices),
-      count: vertexCount * 3,
+      count: vertexCount * fraction * 3,
     };
+  };
+
+  let circle = function(gl) {
+    return circleFraction(gl, 1);
   };
 
   let drawLine = function(gl, program, startX, startY, endX, endY, thickness, colour) {
@@ -105,6 +109,7 @@ let glShapes = (function() {
     triangle: triangle,
     square: square,
     circle: circle,
+    circleFraction: circleFraction,
     drawShape: drawShape,
     drawLine: drawLine,
   };
@@ -187,6 +192,11 @@ let metro = (function() {
         let colour = [0, 0, 0];
         if (i === touched_station) {
           colour = [1, 0, 0];
+        }
+        if (station.blow_time > 0) {
+          let fractionBlown = station.blow_time / game_model.state.time_to_blow;
+          let blowShape = glShapes.circleFraction(gl, fractionBlown);
+          glShapes.drawShape(gl, program, blowShape, station_pos, [0.4, 0.4, 0.4], station_size * 2, station_size * 2, 0);
         }
         glShapes.drawShape(gl, program, shape, station_pos, colour, station_size, station_size, 0);
         glShapes.drawShape(gl, program, shape, station_pos, [1, 1, 1], station_size - station_border_size, station_size - station_border_size, 0);

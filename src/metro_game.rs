@@ -50,6 +50,7 @@ pub struct Station {
     t: StationType,
     position: Point,
     passengers: Vec<StationType>,
+    blow_time: u32,
 }
 
 impl Station {
@@ -58,6 +59,7 @@ impl Station {
             t: t,
             position: position,
             passengers: Vec::new(),
+            blow_time: 0u32,
         }
     }
 }
@@ -216,6 +218,7 @@ pub struct MetroModel {
     min_y: f32,
     max_x: f32,
     max_y: f32,
+    time_to_blow: u32,
     scores: HashMap<PlayerId, u16>,
 }
 
@@ -230,6 +233,7 @@ impl MetroModel {
             min_y: -500.,
             max_x: 500.,
             max_y: 500.,
+            time_to_blow: 1350u32,
             scores: HashMap::new(),
         }
     }
@@ -577,7 +581,22 @@ impl MetroModel {
         self.handle_train_destination(id);
     }
 
+    fn update_station(&mut self, id: &StationId) {
+        self.get_station_mut(id)
+            .map(|s| {
+                if s.passengers.len() > 12 {
+                    s.blow_time += 1;
+                } else {
+                    s.blow_time = 0;
+                }
+            });
+    }
+
     pub fn update(&mut self) {
+        for i in 0..self.stations.len() {
+            let id = StationId(i);
+            self.update_station(&id);
+        }
         for i in 0..self.trains.len() {
             let id = TrainId(i);
             self.update_train(&id);
@@ -805,6 +824,9 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
+                        for _ in 0..15 {
+                            self.model.stations[0].passengers.push(StationType::Circle);
+                        }
                         self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
                         self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
                         for player in self.get_player_ids() {
