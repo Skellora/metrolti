@@ -446,6 +446,23 @@ impl MetroModel {
                     break;
                 }
             }
+            for (other_line_index, other_line) in self.lines.iter().enumerate() {
+                if LineId(other_line_index) == *line_id {
+                    continue;
+                }
+                let other_stations = other_line.all_stations();
+                if !other_stations.contains(&station_id) {
+                    continue;
+                }
+                for other_s_id in other_stations.iter() {
+                    if let Some(station) = self.get_station(other_s_id) {
+                        at_station.remove(&station.t);
+                    }
+                }
+                if at_station.is_empty() {
+                    break;
+                }
+            }
             for s_id in stations_after.iter() {
                 for (other_line_index, other_line) in self.lines.iter().enumerate() {
                     if LineId(other_line_index) == *line_id {
@@ -584,10 +601,10 @@ impl MetroModel {
     fn update_station(&mut self, id: &StationId) {
         self.get_station_mut(id)
             .map(|s| {
-                if s.passengers.len() > 12 {
+                if s.passengers.len() > 7 {
                     s.blow_time += 1;
-                } else {
-                    s.blow_time = 0;
+                } else if s.passengers.len() < 5 && s.blow_time > 0 {
+                    s.blow_time -= 1;
                 }
             });
     }
@@ -824,9 +841,6 @@ impl<T: Ticker, R: Random> MetroGame<T, R> {
                         self.state = MGameState::Game;
                         self.model = MetroModel::new();
                         self.model.stations.push(Station::new(StationType::Circle, (10., -30.)));
-                        for _ in 0..15 {
-                            self.model.stations[0].passengers.push(StationType::Circle);
-                        }
                         self.model.stations.push(Station::new(StationType::Square, (-45., 70.)));
                         self.model.stations.push(Station::new(StationType::Triangle, (300., 30.)));
                         for player in self.get_player_ids() {
@@ -1545,6 +1559,55 @@ mod tests {
         assert_eq!(vec![&StationId(1), &StationId(0)], line.stations_after(&StationId(2), false));
         assert_eq!(vec![&StationId(0)], line.stations_after(&StationId(1), false));
         assert_eq!(vec![&StationId(1), &StationId(2)], line.stations_after(&StationId(0), false));
+    }
+
+    #[test]
+    pub fn passenger_stays_off_change() {
+        let test_loc1 = Station::new (
+            StationType::Triangle,
+            (0., 0.),
+        );
+        let mut test_loc2 = Station::new (
+            StationType::Circle,
+            (10., 20.),
+        );
+        test_loc2.passengers.push(StationType::Triangle);
+        let test_loc3 = Station::new (
+            StationType::Square,
+            (20., 0.),
+        );
+        let test_edge1 = Edge {
+            origin: StationId(0),
+            destination: StationId(1),
+            via_point: (0., 5.),
+        };
+        let test_edge2 = Edge {
+            origin: StationId(1),
+            destination: StationId(2),
+            via_point: (0., 5.),
+        };
+        let line1 = Line { edges: vec![ test_edge1, test_edge2 ], colour: (0., 0., 0.), owning_player: PlayerId::new(0) };
+        let test_edge3 = Edge {
+            origin: StationId(1),
+            destination: StationId(2),
+            via_point: (5., 0.),
+        };
+        let line2 = Line { edges: vec![ test_edge3 ], colour: (0., 0., 0.), owning_player: PlayerId::new(0) };
+        let mut train = Train::new(LineId(1), (0., 10.), (0., 5.), false, StationId(1), StationId(2), 5.);
+        train.passengers.push(StationType::Triangle);
+        let mut m = MetroModel::new();
+        m.stations.push(test_loc1);
+        m.stations.push(test_loc2);
+        m.stations.push(test_loc3);
+        m.lines.push(line1);
+        m.lines.push(line2);
+        m.trains.push(train);
+
+        assert_eq!(vec![StationType::Triangle], m.trains[0].passengers);
+        assert_eq!(vec![StationType::Triangle], m.passengers_who_want_to_alight(&m.trains[0], &StationId(1)));
+
+        assert_eq!(vec![StationType::Triangle], m.get_station(&StationId(1)).unwrap().passengers);
+        assert_eq!(Vec::<StationType>::new(), m.passengers_who_want_to_board(&m.trains[0], &StationId(1)));
     }
 
     #[test]
